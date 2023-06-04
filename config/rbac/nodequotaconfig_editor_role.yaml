@@ -1,0 +1,24 @@
+# permissions for end users to edit nodequotaconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nodequotaconfig-editor-role
+rules:
+- apiGroups:
+  - dana.hns.io
+  resources:
+  - nodequotaconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dana.hns.io
+  resources:
+  - nodequotaconfigs/status
+  verbs:
+  - get

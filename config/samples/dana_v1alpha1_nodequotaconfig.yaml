@@ -1,0 +1,6 @@
+apiVersion: dana.hns.io/v1alpha1
+kind: NodeQuotaConfig
+metadata:
+  name: nodequotaconfig-sample
+spec:
+  # TODO(user): Add fields here
