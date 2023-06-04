@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	danav1alpha1 "nodeQuotaSync/api/v1alpha1"
-	"nodeQuotaSync/controllers"
+	"nodeQuotaSync/internal/controllers"
 	//+kubebuilder:scaffold:imports
 )
 

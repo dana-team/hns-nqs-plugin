@@ -22,7 +22,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	danav1alpha1 "nodeQuotaSync/api/v1alpha1"
+	utils "nodeQuotaSync/internal/utils"
 )
 
 // NodeQuotaConfigReconciler reconciles a NodeQuotaConfig object
@@ -59,29 +59,6 @@ func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-func MultiplyResourceList(resources v1.ResourceList, factor map[string]float64) v1.ResourceList {
-	result := make(v1.ResourceList)
-
-	for name, value := range resources {
-		newValue := new(resource.Quantity)
-		newValue.Set(value.Value())
-
-		// Multiply the value by the factor
-		newValueInt64 := float64(newValue.Value()) * factor[name.String()]
-		newValue.Set(int64(newValueInt64))
-
-		result[name] = *newValue
-	}
-
-	return result
-}
-
-func ClaculateNodeWithMultiplier(node v1.Node, multiplier danav1alpha1.NodeGroup) v1.ResourceList {
-	resourceList := v1.ResourceList{}
-
-	return resourceList
-}
-
 func HoursPassedSinceDate(timestamp metav1.Time) float64 {
 	currentTime := time.Now()
 	timeDiff := currentTime.Sub(timestamp.Time)
@@ -89,21 +66,22 @@ func HoursPassedSinceDate(timestamp metav1.Time) float64 {
 	return hoursPassed
 }
 
-func CalculateNodeGroup(ctx context.Context, nodes v1.NodeList, config danav1alpha1.NodeQuotaConfig, nodeGroup string) (v1.ResourceList, v1.ResourceList) {
-	calculateReserved := make(v1.ResourceList)
+func CalculateNodeGroup(ctx context.Context, nodes v1.NodeList, config danav1alpha1.NodeQuotaConfig, nodeGroup string) v1.ResourceList {
 	var ResourceMultiplier map[string]float64
 	for _, resourceGroup := range config.Spec.NodeGroupList {
 		if resourceGroup.Name == nodeGroup {
 			ResourceMultiplier = resourceGroup.ResourceMultiplier
 		}
 	}
-	for name, row := range config.Status.ReservedResources[nodeGroup] {
-
-	}
-	debtResources := v1.ResourceList{}
 	nodeGroupReources := v1.ResourceList{}
-	return debtResources, nodeGroupReources
+	for _, node := range nodes.Items {
+		resources := utils.MultiplyResourceList(node.Status.Allocatable, ResourceMultiplier)
+		for resourceName, resourceQuantity := range resources {
+			utils.AddResourcesToList(&nodeGroupReources, resourceQuantity, string(resourceName))
+		}
+	}
 
+	return nodeGroupReources
 }
 
 func (r *NodeQuotaConfigReconciler) findNodes(node client.Object) []reconcile.Request {
