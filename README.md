@@ -1,80 +1,32 @@
-# nodequotasync
-// TODO(user): Add simple overview of use/purpose
+# NodeQuotaSync Plugin for HNS
 
-## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+The NodeQuotaSync plugin enables syncing the root quota and secondary subNamespace with the nodes' resources in the cluster. It provides support for resources multiplier for auto commit and reserved resources mechanism, making it easier to troubleshoot nodes without affecting the subnamespace wallets.
 
-## Getting Started
-You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
-**Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+## Features
 
-### Running on the cluster
-1. Install Instances of Custom Resources:
+- Syncs root quota and secondary subNamespace with nodes' resources
+- Resources multiplier for auto commit
+- Reserved resources mechanism for troubleshooting nodes
 
-```sh
-kubectl apply -f config/samples/
-```
+## Installation
 
-2. Build and push your image to the location specified by `IMG`:
-	
-```sh
-make docker-build docker-push IMG=<some-registry>/nodequotasync:tag
-```
-	
-3. Deploy the controller to the cluster with the image specified by `IMG`:
+To install the NodeQuotaSync plugin, follow these steps:
 
-```sh
-make deploy IMG=<some-registry>/nodequotasync:tag
-```
+1. Clone the repository or download the plugin code.
+2. Build the plugin using the provided build script.
+3. Copy the built binary to the desired location.
+4. Configure the plugin settings according to your requirements.
 
-### Uninstall CRDs
-To delete the CRDs from the cluster:
+## Usage
 
-```sh
-make uninstall
-```
+1. Start the HNS service with the NodeQuotaSync plugin enabled.
+2. Configure the plugin settings in the HNS configuration file.
+3. Monitor the syncing process and resource allocation using the HNS CLI or dashboard.
 
-### Undeploy controller
-UnDeploy the controller to the cluster:
+## Configuration
 
-```sh
-make undeploy
-```
+The NodeQuotaSync plugin can be configured by modifying the HNS configuration file. The configuration options for the plugin are as follows:
 
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-### How it works
-This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
-
-It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/) 
-which provides a reconcile function responsible for synchronizing resources untile the desired state is reached on the cluster 
-
-### Test It Out
-1. Install the CRDs into the cluster:
-
-```sh
-make install
-```
-
-2. Run your controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
-
-```sh
-make run
-```
-
-**NOTE:** You can also run this in one step by running: `make install run`
-
-### Modifying the API definitions
-If you are editing the API definitions, generate the manifests such as CRs or CRDs using:
-
-```sh
-make manifests
-```
-
-**NOTE:** Run `make --help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
 
 ## License
 

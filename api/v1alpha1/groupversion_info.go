@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains API Schema definitions for the dana v1alpha1 API group
-//+kubebuilder:object:generate=true
-//+groupName=dana.hns.io
+// +kubebuilder:object:generate=true
+// +groupName=dana.hns.io
 package v1alpha1
 
 import (

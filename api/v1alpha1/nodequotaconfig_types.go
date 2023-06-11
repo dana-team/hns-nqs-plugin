@@ -37,15 +37,16 @@ type ReservedResources struct {
 }
 
 type NodeGroup struct {
-	LabelSelector      map[string]string  `json:"labelSelector"`
-	Name               string             `json:"name"`
-	ResourceMultiplier map[string]float64 `json:"multipliers"`
+	LabelSelector      map[string]string `json:"labelSelector"`
+	Name               string            `json:"name"`
+	ResourceMultiplier map[string]string `json:"multipliers"`
+	IsRoot             bool              `json:"isRoot,omitempty"`
 }
 
 // NodeQuotaConfigStatus defines the observed state of NodeQuotaConfig
 type NodeQuotaConfigStatus struct {
-	Conditions        []metav1.Condition             `json:"conditions"`
-	ReservedResources map[string][]ReservedResources `json:"reservedResources"`
+	Conditions        []metav1.Condition  `json:"conditions"`
+	ReservedResources []ReservedResources `json:"reservedResources"`
 }
 
 //+kubebuilder:object:root=true
