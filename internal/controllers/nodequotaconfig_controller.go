@@ -22,6 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -56,6 +57,9 @@ func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log.Info("Start reconcile flow")
 	config := danav1alpha1.NodeQuotaConfig{}
 	if err := r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, &config); err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{}, err
 	}
 	oldConfigStatus := config.Status.DeepCopy()
@@ -66,6 +70,7 @@ func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err, rootResourceList := r.CalculateNodeGroups(ctx, &config, snsList); err != nil {
 		return ctrl.Result{}, err
 	}
+	utils.DeleteExpiredReservedResources(&config)
 	if reflect.DeepEqual(oldConfigStatus, config.Status) {
 		return ctrl.Result{}, nil
 	}
@@ -111,7 +116,6 @@ func (r *NodeQuotaConfigReconciler) CalculateNodeGroups(ctx context.Context, con
 		totalResources := utils.MergeTwoResourceList(nodeResources, groupReserved)
 		resourcesDiff := utils.SubstractTwoResourceList(totalResources, snsObject.Spec.ResourceQuotaSpec.Hard)
 		plus, debt := utils.GetPlusAndDebtResourceList(resourcesDiff)
-		snsObject.Spec.ResourceQuotaSpec.Hard = utils.MergeTwoResourceList(plus, snsObject.Spec.ResourceQuotaSpec.Hard)
 		config.Status.ReservedResources = []danav1alpha1.ReservedResources{
 			{
 				Resources: debt,
@@ -120,8 +124,11 @@ func (r *NodeQuotaConfigReconciler) CalculateNodeGroups(ctx context.Context, con
 			},
 		}
 		rootResourceList = utils.MergeTwoResourceList(rootResourceList, plus)
-		if err := r.Client.Update(ctx, snsObject); err != nil {
-			return err, rootResourceList
+		if !nodegroup.IsRoot {
+			snsObject.Spec.ResourceQuotaSpec.Hard = utils.MergeTwoResourceList(plus, snsObject.Spec.ResourceQuotaSpec.Hard)
+			if err := r.Client.Update(ctx, snsObject); err != nil {
+				return err, rootResourceList
+			}
 		}
 	}
 	return nil, rootResourceList
