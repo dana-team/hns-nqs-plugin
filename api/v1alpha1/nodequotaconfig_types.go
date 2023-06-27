@@ -26,27 +26,32 @@ import (
 
 // NodeQuotaConfigSpec defines the desired state of NodeQuotaConfig
 type NodeQuotaConfigSpec struct {
-	ReservedHoursTolive int         `json:"reservedHoursToLive"`
-	NodeGroupList       []NodeGroup `json:"nodeGroups"`
+	ReservedHoursTolive int                  `json:"reservedHoursToLive,omitempty"`
+	ControlledResources []string             `json:"controlledResources,omitempty"`
+	Roots               []SubnamespacesRoots `json:"subnamespacesRoots,omitempty"`
 }
 
 type ReservedResources struct {
-	Resources corev1.ResourceList `json:"resources"`
-	NodeGroup string              `json:"nodeGroup"`
+	Resources corev1.ResourceList `json:"resources,omitempty"`
+	NodeGroup string              `json:"nodeGroup,omitempty"`
 	Timestamp metav1.Time         `json:"Timestamp,omitempty" protobuf:"bytes,8,opt,name=Timestamp"`
 }
 
+type SubnamespacesRoots struct {
+	RootNamespace  string      `json:"rootNamespace,omitempty"`
+	SecondaryRoots []NodeGroup `json:"secondaryRoots,omitempty"`
+}
+
 type NodeGroup struct {
-	LabelSelector      map[string]string `json:"labelSelector"`
-	Name               string            `json:"name"`
-	ResourceMultiplier map[string]string `json:"multipliers"`
-	IsRoot             bool              `json:"isRoot,omitempty"`
+	LabelSelector      map[string]string `json:"labelSelector,omitempty"`
+	Name               string            `json:"name,omitempty"`
+	ResourceMultiplier map[string]string `json:"multipliers,omitempty"`
 }
 
 // NodeQuotaConfigStatus defines the observed state of NodeQuotaConfig
 type NodeQuotaConfigStatus struct {
-	Conditions        []metav1.Condition  `json:"conditions"`
-	ReservedResources []ReservedResources `json:"reservedResources"`
+	Conditions        []metav1.Condition  `json:"conditions,omitempty"`
+	ReservedResources []ReservedResources `json:"reservedResources,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -23,15 +23,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	danav1 "github.com/dana-team/hns/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -53,8 +49,7 @@ type NodeQuotaConfigReconciler struct {
 //+kubebuilder:rbac:groups=dana.hns.io,resources=nodequotaconfigs/finalizers,verbs=update
 
 func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
-	log.Info("Start reconcile flow")
+	_ = log.FromContext(ctx)
 	config := danav1alpha1.NodeQuotaConfig{}
 	if err := r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, &config); err != nil {
 		if errors.IsNotFound(err) {
@@ -62,25 +57,56 @@ func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		return ctrl.Result{}, err
 	}
-	oldConfigStatus := config.Status.DeepCopy()
-	snsList := danav1.SubnamespaceList{}
-	if err := r.List(ctx, &snsList); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err, rootResourceList := r.CalculateNodeGroups(ctx, &config, snsList); err != nil {
-		return ctrl.Result{}, err
-	}
-	utils.DeleteExpiredReservedResources(&config)
-	if reflect.DeepEqual(oldConfigStatus, config.Status) {
-		return ctrl.Result{}, nil
-	}
-	if err := r.Client.Status().Update(ctx, &config); err != nil {
+	if err := r.CalculateRootSubnamespaces(ctx, config); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *NodeQuotaConfigReconciler) findConfig(node client.Object) []reconcile.Request {
+// SetupWithManager sets up the controller with the Manager.
+func (r *NodeQuotaConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&danav1alpha1.NodeQuotaConfig{}).
+		Watches(
+			&source.Kind{Type: &corev1.Node{}},
+			handler.EnqueueRequestsFromMapFunc(r.requestConfigReconcile),
+		).
+		Complete(r)
+}
+
+func (r *NodeQuotaConfigReconciler) CalculateRootSubnamespaces(ctx context.Context, config danav1alpha1.NodeQuotaConfig) error {
+	oldConfigStatus := config.Status.DeepCopy()
+	reservedResources := []danav1alpha1.ReservedResources{}
+	for _, rootSubnamespace := range config.Spec.Roots {
+		rootResources := v1.ResourceList{}
+		for _, secondaryRoot := range rootSubnamespace.SecondaryRoots {
+			err, secondaryRootResources := utils.ProcessSecondaryRoot(ctx, r.Client, secondaryRoot, &config, rootSubnamespace.RootNamespace)
+			if err != nil {
+				return err
+			}
+			rootResources = utils.MergeTwoResourceList(secondaryRootResources, rootResources)
+		}
+		rootRQ, err := utils.GetRootQuota(r.Client, ctx, rootSubnamespace.RootNamespace)
+		if err != nil {
+			return err
+		} else {
+			rootRQ.Spec.Hard = utils.FillterUncontrolledResources(rootResources, config.Spec.ControlledResources)
+			if err := r.Update(ctx, &rootRQ); err != nil {
+				return err
+			}
+		}
+	}
+	config.Status.ReservedResources = reservedResources
+	utils.DeleteExpiredReservedResources(&config)
+	if !reflect.DeepEqual(oldConfigStatus, config.Status) {
+		if err := r.Status().Update(ctx, &config); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *NodeQuotaConfigReconciler) requestConfigReconcile(node client.Object) []reconcile.Request {
 	nodeQuotaConfig := danav1alpha1.NodeQuotaConfigList{}
 	err := r.List(context.TODO(), &nodeQuotaConfig)
 	if err != nil {
@@ -97,50 +123,4 @@ func (r *NodeQuotaConfigReconciler) findConfig(node client.Object) []reconcile.R
 		}
 	}
 	return requests
-}
-
-func (r *NodeQuotaConfigReconciler) CalculateNodeGroups(ctx context.Context, config *danav1alpha1.NodeQuotaConfig, snsList danav1.SubnamespaceList) (error, v1.ResourceList) {
-	rootResourceList := v1.ResourceList{}
-	for _, nodegroup := range config.Spec.NodeGroupList {
-		labelSelector := labels.SelectorFromSet(labels.Set(nodegroup.LabelSelector))
-		listOptions := &client.ListOptions{
-			LabelSelector: labelSelector,
-		}
-		nodeList := v1.NodeList{}
-		if err := r.List(ctx, &nodeList, listOptions); err != nil {
-			return err, rootResourceList
-		}
-		nodeResources := utils.CalculateNodeGroup(ctx, v1.NodeList{}, *config, nodegroup.Name)
-		groupReserved := utils.CaculateGroupReservedResources(config.Status.ReservedResources, nodegroup.Name)
-		snsObject := utils.GetSubnamespaceFromList(nodegroup.Name, snsList)
-		totalResources := utils.MergeTwoResourceList(nodeResources, groupReserved)
-		resourcesDiff := utils.SubstractTwoResourceList(totalResources, snsObject.Spec.ResourceQuotaSpec.Hard)
-		plus, debt := utils.GetPlusAndDebtResourceList(resourcesDiff)
-		config.Status.ReservedResources = []danav1alpha1.ReservedResources{
-			{
-				Resources: debt,
-				NodeGroup: nodegroup.Name,
-				Timestamp: metav1.Now(),
-			},
-		}
-		rootResourceList = utils.MergeTwoResourceList(rootResourceList, plus)
-		if !nodegroup.IsRoot {
-			snsObject.Spec.ResourceQuotaSpec.Hard = utils.MergeTwoResourceList(plus, snsObject.Spec.ResourceQuotaSpec.Hard)
-			if err := r.Client.Update(ctx, snsObject); err != nil {
-				return err, rootResourceList
-			}
-		}
-	}
-	return nil, rootResourceList
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *NodeQuotaConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&danav1alpha1.NodeQuotaConfig{}).
-		Watches(
-			&source.Kind{Type: &corev1.Node{}},
-			handler.EnqueueRequestsFromMapFunc(r.findConfig),
-		).
-		Complete(r)
 }

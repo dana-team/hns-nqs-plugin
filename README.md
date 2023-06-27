@@ -1,14 +1,14 @@
-# work In progress might not run
 
 # NodeQuotaSync Plugin for HNS
 
-The NodeQuotaSync plugin enables syncing the root subnamespace and secondary subnamespace with the nodes aloocatable resources in the cluster. It provides support for resources multiplier for over commit and reserved resources mechanism, making it easier to troubleshoot nodes without affecting the subnamespace wallets.
+The NodeQuotaSync plugin enables syncing the root subnamespace and secondary subnamespace with the nodes allocatable resources in the cluster. It provides support for resources multiplier for over commit and reserved resources mechanism, making it easier to troubleshoot nodes without affecting the subnamespace wallets.
 
 ## Features
 
 - Auto sync root subnamespace and secondary subnamespace with the matching nodes allocatable resources.
 - Configureable resources multiplier for over commit.
 - Reserved resources mechanism for remove nodes in a safe way.
+- Select what type of resource to controll
 - Config CRD
 
 ## Installation
@@ -34,18 +34,21 @@ metadata:
   name: example-nodequotaconfig
 spec:
   reservedHoursToLive: 24
-  nodeGroups:
-  - labelSelector:
-      gpu: true
-    name: true
-    resourceMultiplier:
-      cpu: "2"
-      memory: "2"
-    name: cluster
-    resourceMultiplier:
-      cpu: "2"
-      memory: "3"
-    isRoot: true
+  controlledResources: ["cpu","ephermal-storage","memory","pods","nvidia.com/gpu"]
+  subnamespacesRoots:
+    - rootNamespace: ocp-asaf-the-doctor
+      secondaryRoots:
+        - labelSelector:
+            app: sahar
+          name: sahar
+          multipliers:
+            cpu: "2"
+            memory: "2"
+        - labelSelector:
+            app: omer
+          name: omer
+          multipliers:
+            memory: "4"
 ```
 
 ## License

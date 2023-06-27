@@ -1,6 +1,21 @@
 apiVersion: dana.hns.io/v1alpha1
 kind: NodeQuotaConfig
 metadata:
-  name: nodequotaconfig-sample
+  name: example-nodequotaconfig
 spec:
-  # TODO(user): Add fields here
+  reservedHoursToLive: 24
+  controlledResources: ["cpu","ephermal-storage","memory","pods","nvidia.com/gpu"]
+  subnamespacesRoots:
+    - rootNamespace: ocp-asaf-the-doctor
+      secondaryRoots:
+        - labelSelector:
+            app: sahar
+          name: sahar
+          multipliers:
+            cpu: "2"
+            memory: "2"
+        - labelSelector:
+            app: omer
+          name: omer
+          multipliers:
+            memory: "4"

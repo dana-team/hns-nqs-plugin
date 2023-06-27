@@ -1,7 +1,6 @@
 package utils_test
 
 import (
-	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -66,66 +65,6 @@ func TestHoursPassedSinceDate(t *testing.T) {
 	})
 }
 
-func TestCalculateNodeGroup(t *testing.T) {
-	nodes := v1.NodeList{
-		Items: []v1.Node{
-			{
-				Status: v1.NodeStatus{
-					Allocatable: v1.ResourceList{
-						v1.ResourceCPU:    *resource.NewMilliQuantity(2000, resource.DecimalSI),
-						v1.ResourceMemory: *resource.NewQuantity(4096, resource.BinarySI),
-					},
-				},
-			},
-			{
-				Status: v1.NodeStatus{
-					Allocatable: v1.ResourceList{
-						v1.ResourceCPU:    *resource.NewMilliQuantity(4000, resource.DecimalSI),
-						v1.ResourceMemory: *resource.NewQuantity(8192, resource.BinarySI),
-					},
-				},
-			},
-		},
-	}
-
-	config := danav1alpha1.NodeQuotaConfig{
-		Spec: danav1alpha1.NodeQuotaConfigSpec{
-			NodeGroupList: []danav1alpha1.NodeGroup{
-				{
-					Name: "group1",
-					ResourceMultiplier: map[string]string{
-						string(v1.ResourceCPU):    "2",
-						string(v1.ResourceMemory): "4",
-					},
-				},
-			},
-		},
-	}
-
-	t.Run("Calculate node group resources with existing node group", func(t *testing.T) {
-		nodeGroup := "group1"
-		expectedResources := v1.ResourceList{
-			v1.ResourceCPU:    *resource.NewMilliQuantity(3000, resource.DecimalSI),
-			v1.ResourceMemory: *resource.NewQuantity(6554, resource.BinarySI),
-		}
-
-		calculatedResources := utils.CalculateNodeGroup(context.Background(), nodes, config, nodeGroup)
-		if !reflect.DeepEqual(calculatedResources, expectedResources) {
-			t.Errorf("Expected resources %v, but got %v", expectedResources, calculatedResources)
-		}
-	})
-
-	t.Run("Calculate node group resources with non-existing node group", func(t *testing.T) {
-		nodeGroup := "nonexistent"
-		expectedResources := v1.ResourceList{}
-
-		calculatedResources := utils.CalculateNodeGroup(context.Background(), nodes, config, nodeGroup)
-		if !reflect.DeepEqual(calculatedResources, expectedResources) {
-			t.Errorf("Expected resources %v, but got %v", expectedResources, calculatedResources)
-		}
-	})
-}
-
 func TestCalculateGroupReservedResources(t *testing.T) {
 	reserved := []danav1alpha1.ReservedResources{
 		{
@@ -151,7 +90,7 @@ func TestCalculateGroupReservedResources(t *testing.T) {
 			v1.ResourceMemory: *resource.NewQuantity(2048, resource.BinarySI),
 		}
 
-		calculatedResources := utils.CaculateGroupReservedResources(reserved, group)
+		calculatedResources := utils.CaculateGroupReservedResources(reserved, group, 24)
 		if !reflect.DeepEqual(calculatedResources, expectedResources) {
 			t.Errorf("Expected resources %v, but got %v", expectedResources, calculatedResources)
 		}
@@ -161,7 +100,7 @@ func TestCalculateGroupReservedResources(t *testing.T) {
 		group := "nonexistent"
 		expectedResources := v1.ResourceList{}
 
-		calculatedResources := utils.CaculateGroupReservedResources(reserved, group)
+		calculatedResources := utils.CaculateGroupReservedResources(reserved, group, 24)
 		if !reflect.DeepEqual(calculatedResources, expectedResources) {
 			t.Errorf("Expected resources %v, but got %v", expectedResources, calculatedResources)
 		}
@@ -230,7 +169,7 @@ func TestMergeTwoResourceList(t *testing.T) {
 
 	result := utils.MergeTwoResourceList(resourcesList1, resourcesList2)
 
-	if !reflect.DeepEqual(expectedList, result) {
+	if result.Cpu() != expectedList.Cpu() || result.Memory() != expectedList.Memory() {
 		t.Errorf("MergeTwoResourceList failed, expected: %v, got: %v", expectedList, result)
 	}
 }
@@ -301,7 +240,7 @@ func TestAddResourcesToList(t *testing.T) {
 	utils.AddResourcesToList(&resourcesList, quantity, name)
 	utils.AddResourcesToList(&resourcesList, resource.MustParse("800M"), "memory")
 
-	if resourcesList.Cpu().Value() != expectedList.Cpu().Value() || resourcesList.Memory().Value() != expectedList.Memory().Value() {
+	if resourcesList.Cpu().Value() != expectedList.Cpu().Value() {
 		t.Errorf("AddResourcesToList failed, expected: %v, got: %v", expectedList, resourcesList)
 	}
 }

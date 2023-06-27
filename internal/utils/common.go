@@ -7,6 +7,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	danav1 "github.com/dana-team/hns/api/v1"
@@ -14,6 +15,8 @@ import (
 
 const danaHnsRoleKey = "dana.hns.io/role"
 
+// GetSubnamespaceFromList retrieves the subnamespace with the specified name from the given subnamespace list.
+// It returns a pointer to the subnamespace if found, otherwise it returns nil.
 func GetSubnamespaceFromList(name string, subnamespacelist danav1.SubnamespaceList) *danav1.Subnamespace {
 	for _, sns := range subnamespacelist.Items {
 		if sns.Name == name {
@@ -23,6 +26,8 @@ func GetSubnamespaceFromList(name string, subnamespacelist danav1.SubnamespaceLi
 	return nil
 }
 
+// ContainsRootAnnotation checks if the given namespace contains the root annotation.
+// It returns true if the root annotation is present, otherwise it returns false.
 func ContainesRootAnnotation(namespace v1.Namespace) bool {
 	annos := namespace.GetAnnotations()
 	if len(annos) == 0 {
@@ -33,20 +38,18 @@ func ContainesRootAnnotation(namespace v1.Namespace) bool {
 	return ok && len(in) > 0
 }
 
-func GetRootQuota(namepaces v1.NamespaceList, r client.Client, ctx context.Context) (v1.ResourceQuota, error) {
+// GetRootQuota retrieves the resource quota for the root namespace with the specified name.
+// It returns the root resource quota and any error encountered during retrieval.
+func GetRootQuota(r client.Client, ctx context.Context, root string) (v1.ResourceQuota, error) {
 	rootQuota := v1.ResourceQuota{}
-	for _, namespace := range namepaces.Items {
-		if ContainesRootAnnotation(namespace) {
-			resourceQuota := v1.ResourceQuotaList{}
-			if err := r.List(ctx, &resourceQuota); err != nil {
-				return rootQuota, nil
-			}
-			return resourceQuota.Items[0], nil
-		}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: root, Name: root}, &rootQuota); err != nil {
+		return rootQuota, err
 	}
 	return rootQuota, nil
 }
 
+// HoursPassedSinceDate calculates the number of hours passed since the specified timestamp.
+// It returns the rounded number of hours passed.
 func HoursPassedSinceDate(timestamp metav1.Time) int {
 	currentTime := time.Now()
 	timeDiff := currentTime.Sub(timestamp.Time)
