@@ -50,7 +50,7 @@ func GetRootQuota(r client.Client, ctx context.Context, root string) (v1.Resourc
 
 // HoursPassedSinceDate calculates the number of hours passed since the specified timestamp.
 // It returns the rounded number of hours passed.
-func HoursPassedSinceDate(timestamp metav1.Time) int {
+func hoursPassedSinceDate(timestamp metav1.Time) int {
 	currentTime := time.Now()
 	timeDiff := currentTime.Sub(timestamp.Time)
 	hoursPassed := timeDiff.Hours()

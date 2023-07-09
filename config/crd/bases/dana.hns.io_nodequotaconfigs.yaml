@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.2
+    controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
   name: nodequotaconfigs.dana.hns.io
 spec:
@@ -36,33 +36,65 @@ spec:
             description: NodeQuotaConfigSpec defines the desired state of NodeQuotaConfig
             properties:
               controlledResources:
+                description: 'ControlledResources defines which resources the controller
+                  will calculate from the nodes Possible values exmpales: ["cpu","memory"],
+                  ["cpu","gpu"]'
                 items:
                   type: string
                 type: array
               reservedHoursToLive:
+                description: ReservedHoursTolive defines how many hours the reservedresources
+                  can live until they removed from the cluster resources
                 type: integer
               subnamespacesRoots:
+                description: Roots defines the state of the cluster's secondary roots
+                  and roots
                 items:
+                  description: SubnamespacesRoots define the root and secondary root
+                    of the cluster's hierarchy
                   properties:
                     rootNamespace:
+                      description: RootNamespace is the name of the root namespace
                       type: string
                     secondaryRoots:
+                      description: SecondaryRoots are the subnamespaces that under
+                        the root namespace
                       items:
+                        description: NodeGroup defines a group of nodes thats allocated
+                          to the secondray root workloads
                         properties:
                           labelSelector:
                             additionalProperties:
                               type: string
+                            description: 'LabelSelector defines the label selector
+                              of the nodes and how to find them. Possible values examples:
+                              {"app":"gpu-nodes"}'
                             type: object
                           multipliers:
                             additionalProperties:
                               type: string
+                            description: 'ResourceMultiplier defines the multiplier
+                              that will be used when calculating the resources of
+                              nodes for allowing overcommit Possible values examples:
+                              {"cpu":2, "memory":3} {"cpu":3, "gpu":3}'
                             type: object
                           name:
+                            description: Name is the name of the secondaryRoot.
                             type: string
+                        required:
+                        - labelSelector
+                        - name
                         type: object
                       type: array
+                  required:
+                  - rootNamespace
+                  - secondaryRoots
                   type: object
                 type: array
+            required:
+            - controlledResources
+            - reservedHoursToLive
+            - subnamespacesRoots
             type: object
           status:
             description: NodeQuotaConfigStatus defines the observed state of NodeQuotaConfig
@@ -137,11 +169,16 @@ spec:
                 type: array
               reservedResources:
                 items:
+                  description: ReservedResources shows the resources of nodes that
+                    was deleted from the cluster but not from the subnamespace quota
                   properties:
                     Timestamp:
+                      description: Timestamp defines when the nodes was removed
                       format: date-time
                       type: string
                     nodeGroup:
+                      description: NodeGroup defines which of the secondaryRoots the
+                        nodes that was removed was a part of
                       type: string
                     resources:
                       additionalProperties:
@@ -150,8 +187,8 @@ spec:
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                      description: ResourceList is a set of (resource name, quantity)
-                        pairs.
+                      description: Resources defines the amount of resources of the
+                        nodes
                       type: object
                   type: object
                 type: array

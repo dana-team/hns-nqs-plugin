@@ -1,7 +1,7 @@
 
 # NodeQuotaSync Plugin for HNS
 
-The NodeQuotaSync plugin enables syncing the root subnamespace and secondary subnamespace with the nodes allocatable resources in the cluster. It provides support for resources multiplier for over commit and reserved resources mechanism, making it easier to troubleshoot nodes without affecting the subnamespace wallets.
+The NodeQuotaSync plugin enables syncing the root subnamespace and secondary subnamespace with the nodes allocatable resources in the cluster. It provides support for resources multiplier for over commit and reserved resources mechanism, making it easier to remove nodes from the cluster temporarily without affecting the subnamespace wallets.
 
 ## Features
 
