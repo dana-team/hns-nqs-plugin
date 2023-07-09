@@ -1,14 +1,13 @@
-
 # NodeQuotaSync Plugin for HNS
 
-The NodeQuotaSync plugin enables syncing the root subnamespace and secondary subnamespace with the nodes allocatable resources in the cluster. It provides support for resources multiplier for over commit and reserved resources mechanism, making it easier to remove nodes from the cluster temporarily without affecting the subnamespace wallets.
+The NodeQuotaSync plugin enables syncing the root subnamespace and secondary subnamespace with the node's allocatable resources in the cluster. It provides support for resources multiplier for over-commit and reserved resources mechanism, making it easier to remove nodes from the cluster temporarily without affecting the subnamespace wallets.
 
 ## Features
 
-- Auto sync root subnamespace and secondary subnamespace with the matching nodes allocatable resources.
-- Configureable resources multiplier for over commit.
-- Reserved resources mechanism for remove nodes in a safe way.
-- Select what type of resource to controll
+- Auto-sync root subnamespace and secondary subnamespace with the matching nodes' allocatable resources.
+- Configurable resources multiplier for over-commit.
+- Reserved resources mechanism for removing nodes in a safe way.
+- Select what type of resource to control
 - Config CRD
 
 ## Installation
@@ -51,8 +50,8 @@ subnamespaceRoots defines the cluster's hierarchy, the `name` field represents t
 
 ## About the ReservedResources 
 
-The ReservedResources mechanism is a way to ensure we don't encounter resources shortage and `HNS` breakdown when dealing with 
-`Nodes` maintenance. It's works by giving the cluster's admins time to return the node to the cluster without recalculate the cluster's resources, and only removes the node's resources in a controlled way after number of hours that can be configured in the Config CR with the `ReservedHoursTolive` field.
+The ReservedResources mechanism is a way to ensure we don't encounter resources shortage and `HNS` breakdowns when dealing with 
+`Nodes` maintenance. It works by giving the cluster's admins time to return the node to the cluster without recalculating the cluster's resources and only removes the node's resources in a controlled way after a number of hours that can be configured in the Config CR with the `ReservedHoursTolive` field.
 
 When we remove one of the nodes from the cluster a `ReservedResources` will be added to the CRD status:
 ```
@@ -65,7 +64,7 @@ When we remove one of the nodes from the cluster a `ReservedResources` will be a
         pods: '250'
 ```
 
-The cluster's resources won't update until we either return the node's resources or the the number of hours in the `ReservedHoursTolive` will pass from the `Timestamp` and then the resources will be removed.
+The cluster's resources won't update until we either return the node's resources or the number of hours in the `ReservedHoursTolive` will pass from the `Timestamp` and then the resources will be removed.
 
 ## Usage
 

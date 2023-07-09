@@ -26,24 +26,24 @@ import (
 
 // NodeQuotaConfigSpec defines the desired state of NodeQuotaConfig
 type NodeQuotaConfigSpec struct {
-	// ReservedHoursTolive defines how many hours the reservedresources can live until they removed from the cluster resources
-	ReservedHoursTolive int `json:"reservedHoursToLive"`
+	// ReservedHoursToLive defines how many hours the ReservedResources can live until they are removed from the cluster resources
+	ReservedHoursToLive int `json:"reservedHoursToLive"`
 
-	// ControlledResources defines which resources the controller will calculate from the nodes
-	// Possible values exmpales: ["cpu","memory"], ["cpu","gpu"]
+	// ControlledResources defines which node resources are controlled
+	// Possible values examples: ["cpu","memory"], ["cpu","gpu"]
 	ControlledResources []string `json:"controlledResources"`
 
 	// Roots defines the state of the cluster's secondary roots and roots
 	Roots []SubnamespacesRoots `json:"subnamespacesRoots"`
 }
 
-// ReservedResources shows the resources of nodes that was deleted from the cluster but not from the subnamespace quota
+// ReservedResources shows the resources of nodes that were deleted from the cluster but not from the subnamespace quota
 type ReservedResources struct {
-	// Resources defines the amount of resources of the nodes
+	// Resources defines the number of resources of the nodes
 	Resources corev1.ResourceList `json:"resources,omitempty"`
-	// NodeGroup defines which of the secondaryRoots the nodes that was removed was a part of
+	// NodeGroup defines which of the secondaryRoots the nodes that were removed was a part of
 	NodeGroup string `json:"nodeGroup,omitempty"`
-	// Timestamp defines when the nodes was removed
+	// Timestamp defines when the nodes were removed
 	Timestamp metav1.Time `json:"Timestamp,omitempty" protobuf:"bytes,8,opt,name=Timestamp"`
 }
 
@@ -51,11 +51,11 @@ type ReservedResources struct {
 type SubnamespacesRoots struct {
 	// RootNamespace is the name of the root namespace
 	RootNamespace string `json:"rootNamespace"`
-	// SecondaryRoots are the subnamespaces that under the root namespace
+	// SecondaryRoots are the subnamespaces under the root namespace
 	SecondaryRoots []NodeGroup `json:"secondaryRoots"`
 }
 
-// NodeGroup defines a group of nodes thats allocated to the secondray root workloads
+// NodeGroup defines a group of nodes that allocated to the secondary root workloads
 type NodeGroup struct {
 	// LabelSelector defines the label selector of the nodes and how to find them.
 	// Possible values examples: {"app":"gpu-nodes"}

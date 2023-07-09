@@ -61,7 +61,7 @@ func getReservedResourcesByGroup(group string, config danav1alpha1.NodeQuotaConf
 func DeleteExpiredReservedResources(config *danav1alpha1.NodeQuotaConfig, logger logr.Logger) {
 	newReservedResources := []danav1alpha1.ReservedResources{}
 	for _, resources := range config.Status.ReservedResources {
-		if hoursPassedSinceDate(resources.Timestamp) < int(config.Spec.ReservedHoursTolive) {
+		if hoursPassedSinceDate(resources.Timestamp) < int(config.Spec.ReservedHoursToLive) {
 			newReservedResources = append(newReservedResources, resources)
 		} else {
 			logger.Info(fmt.Sprintf("Removed ReservedResources from nodeGroup %s", resources.NodeGroup))
@@ -154,7 +154,7 @@ func ProcessSecondaryRoot(ctx context.Context, r client.Client, secondaryRoot da
 	if isGreaterThan(sns.Spec.ResourceQuotaSpec.Hard, groupResources) {
 		// Nodes removed
 		debt := subtractTwoResourceList(sns.Spec.ResourceQuotaSpec.Hard, groupResources)
-		if groupReserved.NodeGroup == "" || hoursPassedSinceDate(groupReserved.Timestamp) < int(config.Spec.ReservedHoursTolive) {
+		if groupReserved.NodeGroup == "" || hoursPassedSinceDate(groupReserved.Timestamp) < int(config.Spec.ReservedHoursToLive) {
 			setReservedToConfig(debt, secondaryRoot.Name, config, logr)
 			return nil, sns
 		}

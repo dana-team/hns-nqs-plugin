@@ -55,7 +55,7 @@ func TestDeleteExpiredReservedResources(t *testing.T) {
 	t.Run("Delete expired reserved resources", func(t *testing.T) {
 		config := &danav1alpha1.NodeQuotaConfig{
 			Spec: danav1alpha1.NodeQuotaConfigSpec{
-				ReservedHoursTolive: 24,
+				ReservedHoursToLive: 24,
 			},
 			Status: danav1alpha1.NodeQuotaConfigStatus{
 				ReservedResources: []danav1alpha1.ReservedResources{
