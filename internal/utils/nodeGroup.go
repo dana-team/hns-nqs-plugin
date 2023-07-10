@@ -61,10 +61,10 @@ func getReservedResourcesByGroup(group string, config danav1alpha1.NodeQuotaConf
 func DeleteExpiredReservedResources(config *danav1alpha1.NodeQuotaConfig, logger logr.Logger) {
 	newReservedResources := []danav1alpha1.ReservedResources{}
 	for _, resources := range config.Status.ReservedResources {
-		if hoursPassedSinceDate(resources.Timestamp) < int(config.Spec.ReservedHoursToLive) {
-			newReservedResources = append(newReservedResources, resources)
-		} else {
+		if isReservedResourceExpired(resources, *config) {
 			logger.Info(fmt.Sprintf("Removed ReservedResources from nodeGroup %s", resources.NodeGroup))
+		} else {
+			newReservedResources = append(newReservedResources, resources)
 		}
 	}
 	config.Status.ReservedResources = newReservedResources
@@ -103,13 +103,47 @@ func doesReservedResourceExist(config danav1alpha1.NodeQuotaConfig, nodeGroupNam
 	return false
 }
 
+// UpdateRootSubnamespace updates the resourceQuota of the rootSubnamespace with the new quantity of resources.
+func UpdateRootSubnamespace(ctx context.Context, rootResources v1.ResourceList, rootSubnamespace danav1alpha1.SubnamespacesRoots, logger logr.Logger, client client.Client) error {
+	rootRQ, err := GetRootQuota(client, ctx, rootSubnamespace.RootNamespace)
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Error getting the %s resourceQuota", rootSubnamespace.RootNamespace))
+		return err
+	}
+	rootRQ.Spec.Hard = rootResources
+	logger.Info(fmt.Sprintf("Updating RootSubnamespace %s with new resources", rootSubnamespace.RootNamespace))
+	if err := client.Update(ctx, &rootRQ); err != nil {
+		logger.Error(err, fmt.Sprintf("Error updating rootSubnamespace %s"), rootSubnamespace.RootNamespace)
+		return err
+	}
+	return nil
+}
+
+// UpdateRootSubnamespace updates the secondaryRoots in the cluster with the new quantity of resources.
+// It takes slice of Subnamespaces that was updated in memory and does API requests to commit the update.
+func UpdateProcessedSecondaryRoots(ctx context.Context, processedSecondaryRoots []danav1.Subnamespace, logger logr.Logger, client client.Client) error {
+	for _, sns := range processedSecondaryRoots {
+		logger.Info(fmt.Sprintf("Updating secondaryRoot %s with new resources", sns.Name))
+		if err := client.Update(ctx, &sns); err != nil {
+			logger.Error(err, fmt.Sprintf("Error updating secondaryRoot %s"), sns.Name)
+			return err
+		}
+	}
+	return nil
+}
+
+// isReservedResourceExpired checks if a reserved created more than X hours ago, defined by the user in the config CRD.
+func isReservedResourceExpired(reservedResources danav1alpha1.ReservedResources, config danav1alpha1.NodeQuotaConfig) bool {
+	return hoursPassedSinceDate(reservedResources.Timestamp) >= config.Spec.ReservedHoursToLive
+}
+
 // setReservedToConfig sets the reserved resources for a node group in the NodeQuotaConfig.
 // It takes the resource debt (v1.ResourceList) to set, the node group name, the NodeQuotaConfig to modify, and a logger for logging informational messages.
 func setReservedToConfig(debt v1.ResourceList, nodeGroupName string, config *danav1alpha1.NodeQuotaConfig, logr logr.Logger) {
 	if doesReservedResourceExist(*config, nodeGroupName) {
 		reservedResources := getReservedResourcesByGroup(nodeGroupName, *config)
 		reservedResources.Resources = debt
-		removeReservedfromConfig(nodeGroupName, config)
+		removeReservedFromConfig(nodeGroupName, config)
 		config.Status.ReservedResources = append(config.Status.ReservedResources, reservedResources)
 		return
 	}
@@ -121,9 +155,9 @@ func setReservedToConfig(debt v1.ResourceList, nodeGroupName string, config *dan
 	logr.Info(fmt.Sprintf("Added ReservedResources to nodeGroup %s", nodeGroupName))
 }
 
-// removeReservedfromConfig removes the reserved resources for a node group from the NodeQuotaConfig.
+// removeReservedFromConfig removes the reserved resources for a node group from the NodeQuotaConfig.
 // It takes the node group name and the NodeQuotaConfig to modify.
-func removeReservedfromConfig(nodeGroupName string, config *danav1alpha1.NodeQuotaConfig) {
+func removeReservedFromConfig(nodeGroupName string, config *danav1alpha1.NodeQuotaConfig) {
 	index := -1
 	for i, reservedResources := range config.Status.ReservedResources {
 		if reservedResources.NodeGroup == nodeGroupName {
@@ -154,7 +188,7 @@ func ProcessSecondaryRoot(ctx context.Context, r client.Client, secondaryRoot da
 	if isGreaterThan(sns.Spec.ResourceQuotaSpec.Hard, groupResources) {
 		// Nodes removed
 		debt := subtractTwoResourceList(sns.Spec.ResourceQuotaSpec.Hard, groupResources)
-		if groupReserved.NodeGroup == "" || hoursPassedSinceDate(groupReserved.Timestamp) < int(config.Spec.ReservedHoursToLive) {
+		if groupReserved.NodeGroup == "" || !isReservedResourceExpired(groupReserved, *config) {
 			setReservedToConfig(debt, secondaryRoot.Name, config, logr)
 			return nil, sns
 		}
@@ -162,7 +196,7 @@ func ProcessSecondaryRoot(ctx context.Context, r client.Client, secondaryRoot da
 		// Nodes added
 		totalResources := MergeTwoResourceList(groupResources, groupReserved.Resources)
 		if isGreaterThan(totalResources, sns.Spec.ResourceQuotaSpec.Hard) || isEqualTo(totalResources, sns.Spec.ResourceQuotaSpec.Hard) {
-			removeReservedfromConfig(secondaryRoot.Name, config)
+			removeReservedFromConfig(secondaryRoot.Name, config)
 		}
 	}
 	if !reflect.DeepEqual(sns.Spec.ResourceQuotaSpec.Hard, groupResources) {

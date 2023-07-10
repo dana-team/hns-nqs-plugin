@@ -26,18 +26,6 @@ func GetSubnamespaceFromList(name string, subnamespacelist danav1.SubnamespaceLi
 	return nil
 }
 
-// ContainsRootAnnotation checks if the given namespace contains the root annotation.
-// It returns true if the root annotation is present, otherwise it returns false.
-func ContainesRootAnnotation(namespace v1.Namespace) bool {
-	annos := namespace.GetAnnotations()
-	if len(annos) == 0 {
-		return false
-	}
-
-	in, ok := annos[danaHnsRoleKey]
-	return ok && len(in) > 0
-}
-
 // GetRootQuota retrieves the resource quota for the root namespace with the specified name.
 // It returns the root resource quota and any error encountered during retrieval.
 func GetRootQuota(r client.Client, ctx context.Context, root string) (v1.ResourceQuota, error) {

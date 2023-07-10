@@ -1,10 +1,10 @@
 # NodeQuotaSync Plugin for HNS
 
-The NodeQuotaSync plugin enables syncing the root subnamespace and secondary subnamespace with the node's allocatable resources in the cluster. It provides support for resources multiplier for over-commit and reserved resources mechanism, making it easier to remove nodes from the cluster temporarily without affecting the subnamespace wallets.
+The NodeQuotaSync plugin enables syncing the root subnamespace and secondary subnamespaces with the node's allocatable resources in the cluster. It provides support for resources multiplier for over-commit and reserved resources mechanism, making it easier to remove nodes from the cluster temporarily without affecting the subnamespaces wallets.
 
 ## Features
 
-- Auto-sync root subnamespace and secondary subnamespace with the matching nodes' allocatable resources.
+- Auto-sync root subnamespace and secondary subnamespaces with the matching nodes' allocatable resources.
 - Configurable resources multiplier for over-commit.
 - Reserved resources mechanism for removing nodes in a safe way.
 - Select what type of resource to control
@@ -31,17 +31,17 @@ spec:
   reservedHoursToLive: 24
   controlledResources: ["cpu","ephermal-storage","memory","pods","nvidia.com/gpu"]
   subnamespacesRoots:
-    - rootNamespace: ocp-asaf-the-doctor
+    - rootNamespace: cluster-root
       secondaryRoots:
         - labelSelector:
-            app: sahar
-          name: sahar
+            app: gpu
+          name: gpu
           multipliers:
             cpu: "2"
             memory: "2"
         - labelSelector:
-            app: omer
-          name: omer
+            app: cpu-workloads
+          name: cpu-workloads
           multipliers:
             memory: "4"
 ```
@@ -57,7 +57,7 @@ When we remove one of the nodes from the cluster a `ReservedResources` will be a
 ```
   reservedResources:
     - Timestamp: '2023-07-09T07:04:27Z'
-      nodeGroup: omer
+      nodeGroup: cpu-workloads
       resources:
         cpu: 3500m
         memory: '61847027712'

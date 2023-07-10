@@ -54,6 +54,7 @@ type NodeQuotaConfigReconciler struct {
 func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	config := danav1alpha1.NodeQuotaConfig{}
+	oldConfigStatus := config.Status.DeepCopy()
 	if err := r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, &config); err != nil {
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -62,6 +63,10 @@ func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	logger.Info("Start calculating resources")
 	if err := r.CalculateRootSubnamespaces(ctx, config, logger); err != nil {
+		return ctrl.Result{}, err
+	}
+	utils.DeleteExpiredReservedResources(&config, logger)
+	if err := r.UpdateConfigStatus(ctx, config, *oldConfigStatus, logger); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
@@ -82,7 +87,6 @@ func (r *NodeQuotaConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // It takes a context, the NodeQuotaConfig to reconcile, and a logger for logging informational messages.
 // It returns an error (if any occurred) during the calculation.
 func (r *NodeQuotaConfigReconciler) CalculateRootSubnamespaces(ctx context.Context, config danav1alpha1.NodeQuotaConfig, logger logr.Logger) error {
-	oldConfigStatus := config.Status.DeepCopy()
 	for _, rootSubnamespace := range config.Spec.Roots {
 		logger.Info(fmt.Sprintf("Starting to calculate RootSubnamespace %s", rootSubnamespace.RootNamespace))
 		rootResources := v1.ResourceList{}
@@ -96,25 +100,18 @@ func (r *NodeQuotaConfigReconciler) CalculateRootSubnamespaces(ctx context.Conte
 			processedSecondaryRoots = append(processedSecondaryRoots, secondaryRootSns)
 			rootResources = utils.MergeTwoResourceList(secondaryRootSns.Spec.ResourceQuotaSpec.Hard, rootResources)
 		}
-		rootRQ, err := utils.GetRootQuota(r.Client, ctx, rootSubnamespace.RootNamespace)
-		if err != nil {
-			logger.Error(err, fmt.Sprintf("Error getting the %s resourceQuota", rootSubnamespace.RootNamespace))
+		if err := utils.UpdateRootSubnamespace(ctx, rootResources, rootSubnamespace, logger, r.Client); err != nil {
 			return err
-		} else {
-			rootRQ.Spec.Hard = rootResources
-			logger.Info(fmt.Sprintf("Updating RootSubnamespace %s with new resources", rootSubnamespace.RootNamespace))
-			if err := r.Update(ctx, &rootRQ); err != nil {
-				return err
-			}
-			for _, sns := range processedSecondaryRoots {
-				logger.Info(fmt.Sprintf("Updating secondaryRoot %s with new resources", sns.Name))
-				if err := r.Client.Update(ctx, &sns); err != nil {
-					return err
-				}
-			}
+		}
+		if err := utils.UpdateProcessedSecondaryRoots(ctx, processedSecondaryRoots, logger, r.Client); err != nil {
+			return err
 		}
 	}
-	utils.DeleteExpiredReservedResources(&config, logger)
+	return nil
+}
+
+// UpdateConfigStatus updates the status of the NodeQuotaConfig if its diffrent from the current status.
+func (r *NodeQuotaConfigReconciler) UpdateConfigStatus(ctx context.Context, config danav1alpha1.NodeQuotaConfig, oldConfigStatus danav1alpha1.NodeQuotaConfigStatus, logger logr.Logger) error {
 	if !reflect.DeepEqual(oldConfigStatus.ReservedResources, config.Status.ReservedResources) {
 		if err := r.Status().Update(ctx, &config); err != nil {
 			logger.Error(err, fmt.Sprintf("Error updating the NodeQuotaConfig"))
@@ -124,7 +121,7 @@ func (r *NodeQuotaConfigReconciler) CalculateRootSubnamespaces(ctx context.Conte
 	return nil
 }
 
-// requestConfigReconcile generates a list of reconcile requests for NodeQuotaConfig objects that need to be reconciled based on the given node.
+// requestConfigReconcile generates a list of reconcile requests for NodeQuotaConfig objects that need to be reconciled.
 // It takes a context and the node object.
 // It returns a slice of reconcile requests ([]reconcile.Request).
 func (r *NodeQuotaConfigReconciler) requestConfigReconcile(ctx context.Context, node client.Object) []reconcile.Request {
