@@ -113,7 +113,7 @@ func UpdateRootSubnamespace(ctx context.Context, rootResources v1.ResourceList, 
 	rootRQ.Spec.Hard = rootResources
 	logger.Info(fmt.Sprintf("Updating RootSubnamespace %s with new resources", rootSubnamespace.RootNamespace))
 	if err := client.Update(ctx, &rootRQ); err != nil {
-		logger.Error(err, fmt.Sprintf("Error updating rootSubnamespace %s"), rootSubnamespace.RootNamespace)
+		logger.Error(err, fmt.Sprintf("Error updating rootSubnamespace %s", rootSubnamespace.RootNamespace))
 		return err
 	}
 	return nil
@@ -125,7 +125,7 @@ func UpdateProcessedSecondaryRoots(ctx context.Context, processedSecondaryRoots 
 	for _, sns := range processedSecondaryRoots {
 		logger.Info(fmt.Sprintf("Updating secondaryRoot %s with new resources", sns.Name))
 		if err := client.Update(ctx, &sns); err != nil {
-			logger.Error(err, fmt.Sprintf("Error updating secondaryRoot %s"), sns.Name)
+			logger.Error(err, fmt.Sprintf("Error updating secondaryRoot %s", sns.Name))
 			return err
 		}
 	}

@@ -36,15 +36,14 @@ spec:
             description: NodeQuotaConfigSpec defines the desired state of NodeQuotaConfig
             properties:
               controlledResources:
-                description: 'ControlledResources defines which resources the controller
-                  will calculate from the nodes Possible values exmpales: ["cpu","memory"],
-                  ["cpu","gpu"]'
+                description: 'ControlledResources defines which node resources are
+                  controlled Possible values examples: ["cpu","memory"], ["cpu","gpu"]'
                 items:
                   type: string
                 type: array
               reservedHoursToLive:
-                description: ReservedHoursTolive defines how many hours the reservedresources
-                  can live until they removed from the cluster resources
+                description: ReservedHoursToLive defines how many hours the ReservedResources
+                  can live until they are removed from the cluster resources
                 type: integer
               subnamespacesRoots:
                 description: Roots defines the state of the cluster's secondary roots
@@ -57,11 +56,11 @@ spec:
                       description: RootNamespace is the name of the root namespace
                       type: string
                     secondaryRoots:
-                      description: SecondaryRoots are the subnamespaces that under
-                        the root namespace
+                      description: SecondaryRoots are the subnamespaces under the
+                        root namespace
                       items:
-                        description: NodeGroup defines a group of nodes thats allocated
-                          to the secondray root workloads
+                        description: NodeGroup defines a group of nodes that allocated
+                          to the secondary root workloads
                         properties:
                           labelSelector:
                             additionalProperties:
@@ -170,15 +169,15 @@ spec:
               reservedResources:
                 items:
                   description: ReservedResources shows the resources of nodes that
-                    was deleted from the cluster but not from the subnamespace quota
+                    were deleted from the cluster but not from the subnamespace quota
                   properties:
                     Timestamp:
-                      description: Timestamp defines when the nodes was removed
+                      description: Timestamp defines when the nodes were removed
                       format: date-time
                       type: string
                     nodeGroup:
                       description: NodeGroup defines which of the secondaryRoots the
-                        nodes that was removed was a part of
+                        nodes that were removed was a part of
                       type: string
                     resources:
                       additionalProperties:
@@ -187,7 +186,7 @@ spec:
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                      description: Resources defines the amount of resources of the
+                      description: Resources defines the number of resources of the
                         nodes
                       type: object
                   type: object
