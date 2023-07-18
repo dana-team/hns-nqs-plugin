@@ -11,13 +11,13 @@ import (
 // fiterUncontrolledResources filters the given resources list based on the controlled resources.
 // It returns a new resource list that contains only the resources specified in the controlled resources list.
 func filterUncontrolledResources(resourcesList v1.ResourceList, controlledResoures []string) v1.ResourceList {
-	fillteredList := v1.ResourceList{}
+	filteredList := v1.ResourceList{}
 	for resourceName, quantity := range resourcesList {
 		if slices.Contains(controlledResoures, resourceName.String()) {
-			addResourcesToList(&fillteredList, quantity, resourceName.String())
+			addResourcesToList(&filteredList, quantity, resourceName.String())
 		}
 	}
-	return fillteredList
+	return filteredList
 }
 
 // isGreaterThan checks if the quantities in resourcesList are greater than or equal to the corresponding quantities in resourcesList2.
@@ -110,6 +110,13 @@ func subtractTwoResourceList(resourcesList v1.ResourceList, resourcelist2 v1.Res
 	}
 
 	return result
+}
+
+func patchResourcesToList(resourcesList v1.ResourceList, resourcesToPatch v1.ResourceList) v1.ResourceList {
+	for resourceName, resourceQuantity := range resourcesToPatch {
+		resourcesList[resourceName] = resourceQuantity
+	}
+	return resourcesList
 }
 
 // multiplyResourceList multiplies the values of resources in the given resource list by the corresponding factors.

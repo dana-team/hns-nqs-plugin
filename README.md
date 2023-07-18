@@ -46,12 +46,12 @@ spec:
             memory: "4"
 ```
 
-subnamespaceRoots defines the cluster's hierarchy, the `name` field represents the name of the `root` namespace and the secondaryRoots are the direct children of the `root` namespaces with thier corresponding node's labelSelector and multipliers.
+subnamespaceRoots defines the cluster's hierarchy, the `name` field represents the name of the `root` namespace and the secondaryRoots are the direct children of the `root` namespaces with their corresponding node's labelSelector and multipliers.
 
 ## About the ReservedResources 
 
 The ReservedResources mechanism is a way to ensure we don't encounter resources shortage and `HNS` breakdowns when dealing with 
-`Nodes` maintenance. It works by giving the cluster's admins time to return the node to the cluster without recalculating the cluster's resources and only removes the node's resources in a controlled way after a number of hours that can be configured in the Config CR with the `ReservedHoursTolive` field.
+`Nodes` maintenance. It works by giving the cluster's admins time to return the node to the cluster without recalculating the cluster's resources and only removes the node's resources in a controlled way after a number of hours that can be configured in the Config CR with the `ReservedHoursToLive` field.
 
 When we remove one of the nodes from the cluster a `ReservedResources` will be added to the CRD status:
 ```

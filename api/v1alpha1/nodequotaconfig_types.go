@@ -21,9 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // NodeQuotaConfigSpec defines the desired state of NodeQuotaConfig
 type NodeQuotaConfigSpec struct {
 	// ReservedHoursToLive defines how many hours the ReservedResources can live until they are removed from the cluster resources
