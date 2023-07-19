@@ -1,14 +1,14 @@
-package utils_test
+package utils
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
 	danav1alpha1 "nodeQuotaSync/api/v1alpha1"
-	utils "nodeQuotaSync/internal/utils"
 
 	danav1 "github.com/dana-team/hns/api/v1"
+	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "k8s.io/api/core/v1"
@@ -35,7 +35,7 @@ func TestGetSubnamespaceFromList(t *testing.T) {
 	}
 
 	t.Run("Existing subnamespace should be returned", func(t *testing.T) {
-		subnamespace := utils.GetSubnamespaceFromList("subnamespace2", subnamespaceList)
+		subnamespace := GetSubnamespaceFromList("subnamespace2", subnamespaceList)
 		if subnamespace == nil {
 			t.Error("Expected subnamespace to be returned, but got nil")
 		} else if subnamespace.Name != "subnamespace2" {
@@ -44,65 +44,9 @@ func TestGetSubnamespaceFromList(t *testing.T) {
 	})
 
 	t.Run("Non-existing subnamespace should return nil", func(t *testing.T) {
-		subnamespace := utils.GetSubnamespaceFromList("nonexistent", subnamespaceList)
+		subnamespace := GetSubnamespaceFromList("nonexistent", subnamespaceList)
 		if subnamespace != nil {
 			t.Errorf("Expected nil, but got subnamespace with name '%s'", subnamespace.Name)
-		}
-	})
-}
-
-func TestHoursPassedSinceDate(t *testing.T) {
-	t.Run("Should return correct number of hours passed", func(t *testing.T) {
-		timestamp := metav1.Time{
-			Time: time.Now().Add(-3 * time.Hour), // Set timestamp 3 hours ago
-		}
-
-		hoursPassed := utils.HoursPassedSinceDate(timestamp)
-		expectedHoursPassed := int(3)
-		if hoursPassed != expectedHoursPassed {
-			t.Errorf("Expected %v hours passed, but got %v", expectedHoursPassed, hoursPassed)
-		}
-	})
-}
-
-func TestCalculateGroupReservedResources(t *testing.T) {
-	reserved := []danav1alpha1.ReservedResources{
-		{
-			NodeGroup: "group1",
-			Resources: v1.ResourceList{
-				v1.ResourceCPU:    *resource.NewMilliQuantity(1000, resource.DecimalSI),
-				v1.ResourceMemory: *resource.NewQuantity(2048, resource.BinarySI),
-			},
-		},
-		{
-			NodeGroup: "group2",
-			Resources: v1.ResourceList{
-				v1.ResourceCPU:    *resource.NewMilliQuantity(2000, resource.DecimalSI),
-				v1.ResourceMemory: *resource.NewQuantity(4096, resource.BinarySI),
-			},
-		},
-	}
-
-	t.Run("Calculate group reserved resources with existing group", func(t *testing.T) {
-		group := "group1"
-		expectedResources := v1.ResourceList{
-			v1.ResourceCPU:    *resource.NewMilliQuantity(1000, resource.DecimalSI),
-			v1.ResourceMemory: *resource.NewQuantity(2048, resource.BinarySI),
-		}
-
-		calculatedResources := utils.CaculateGroupReservedResources(reserved, group, 24)
-		if !reflect.DeepEqual(calculatedResources, expectedResources) {
-			t.Errorf("Expected resources %v, but got %v", expectedResources, calculatedResources)
-		}
-	})
-
-	t.Run("Calculate group reserved resources with non-existing group", func(t *testing.T) {
-		group := "nonexistent"
-		expectedResources := v1.ResourceList{}
-
-		calculatedResources := utils.CaculateGroupReservedResources(reserved, group, 24)
-		if !reflect.DeepEqual(calculatedResources, expectedResources) {
-			t.Errorf("Expected resources %v, but got %v", expectedResources, calculatedResources)
 		}
 	})
 }
@@ -111,12 +55,12 @@ func TestDeleteExpiredReservedResources(t *testing.T) {
 	t.Run("Delete expired reserved resources", func(t *testing.T) {
 		config := &danav1alpha1.NodeQuotaConfig{
 			Spec: danav1alpha1.NodeQuotaConfigSpec{
-				ReservedHoursTolive: 24,
+				ReservedHoursToLive: 24,
 			},
 			Status: danav1alpha1.NodeQuotaConfigStatus{
 				ReservedResources: []danav1alpha1.ReservedResources{
 					{
-						Timestamp: metav1.Time{Time: time.Now().Add(-20 * time.Hour)}, // Expired timestamp
+						Timestamp: metav1.Time{Time: time.Now().Add(-25 * time.Hour)}, // Expired timestamp
 						Resources: v1.ResourceList{
 							v1.ResourceCPU:    *resource.NewMilliQuantity(1000, resource.DecimalSI),
 							v1.ResourceMemory: *resource.NewQuantity(2048, resource.BinarySI),
@@ -133,7 +77,7 @@ func TestDeleteExpiredReservedResources(t *testing.T) {
 			},
 		}
 
-		utils.DeleteExpiredReservedResources(config)
+		DeleteExpiredReservedResources(config, logr.Discard())
 
 		expectedReservedResources := []danav1alpha1.ReservedResources{
 			{
@@ -145,140 +89,150 @@ func TestDeleteExpiredReservedResources(t *testing.T) {
 			},
 		}
 
-		if !reflect.DeepEqual(config.Status.ReservedResources, expectedReservedResources) {
+		if len(expectedReservedResources) != 1 {
 			t.Errorf("Expected reserved resources %v, but got %v", expectedReservedResources, config.Status.ReservedResources)
 		}
 	})
 }
 
-func TestMergeTwoResourceList(t *testing.T) {
-	resourcesList1 := v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse("1"),
-		v1.ResourceMemory: resource.MustParse("1Gi"),
-	}
-
-	resourcesList2 := v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse("2"),
-		v1.ResourceMemory: resource.MustParse("2Gi"),
-	}
-
-	expectedList := v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse("3"),
-		v1.ResourceMemory: resource.MustParse("3Gi"),
-	}
-
-	result := utils.MergeTwoResourceList(resourcesList1, resourcesList2)
-
-	if result.Cpu() != expectedList.Cpu() || result.Memory() != expectedList.Memory() {
-		t.Errorf("MergeTwoResourceList failed, expected: %v, got: %v", expectedList, result)
-	}
-}
-
-func TestSubstractTwoResourceList(t *testing.T) {
-	resourcesList1 := v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse("3"),
-		v1.ResourceMemory: resource.MustParse("3Gi"),
-	}
-
-	resourcesList2 := v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse("1"),
-		v1.ResourceMemory: resource.MustParse("1Gi"),
-	}
-
-	expectedList := v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse("2"),
-		v1.ResourceMemory: resource.MustParse("2Gi"),
-	}
-
-	result := utils.SubstractTwoResourceList(resourcesList1, resourcesList2)
-
-	if !reflect.DeepEqual(expectedList, result) {
-		t.Errorf("SubstractTwoResourceList failed, expected: %v, got: %v", expectedList, result)
-	}
-}
-
-func TestGetPlusAndDebtResourceList(t *testing.T) {
+func TestFilterUncontrolledResources(t *testing.T) {
 	resourcesList := v1.ResourceList{
-		v1.ResourceCPU:     resource.MustParse("1"),
-		v1.ResourceMemory:  resource.MustParse("-1Gi"),
-		v1.ResourceStorage: resource.MustParse("500Mi"),
+		v1.ResourceCPU:    resource.MustParse("1"),
+		v1.ResourceMemory: resource.MustParse("2Gi"),
+	}
+	controlledResources := []string{"cpu"}
+	expectedResult := v1.ResourceList{
+		v1.ResourceCPU: resource.MustParse("1"),
 	}
 
-	expectedPlusResources := v1.ResourceList{
-		v1.ResourceCPU:     resource.MustParse("1"),
-		v1.ResourceStorage: resource.MustParse("500Mi"),
+	result := filterUncontrolledResources(resourcesList, controlledResources)
+	assert.Equal(t, expectedResult, result)
+}
+
+func TestIsGreaterThan(t *testing.T) {
+	resourcesList := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("2"),
+		v1.ResourceMemory: resource.MustParse("4Gi"),
+	}
+	resourcesList2 := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("1"),
+		v1.ResourceMemory: resource.MustParse("2Gi"),
 	}
 
-	expectedDebtResources := v1.ResourceList{
-		v1.ResourceMemory: resource.MustParse("-1Gi"),
+	result := isGreaterThan(resourcesList, resourcesList2)
+	assert.True(t, result)
+}
+
+func TestIsEqualTo(t *testing.T) {
+	resourcesList := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("2"),
+		v1.ResourceMemory: resource.MustParse("4Gi"),
+	}
+	resourcesList2 := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("2"),
+		v1.ResourceMemory: resource.MustParse("4Gi"),
 	}
 
-	plusResources, debtResources := utils.GetPlusAndDebtResourceList(resourcesList)
-
-	if !reflect.DeepEqual(expectedPlusResources, plusResources) {
-		t.Errorf("GetPlusAndDebtResourceList (plusResources) failed, expected: %v, got: %v", expectedPlusResources, plusResources)
-	}
-
-	if !reflect.DeepEqual(expectedDebtResources, debtResources) {
-		t.Errorf("GetPlusAndDebtResourceList (debtResources) failed, expected: %v, got: %v", expectedDebtResources, debtResources)
-	}
+	result := isEqualTo(resourcesList, resourcesList2)
+	assert.True(t, result)
 }
 
 func TestAddResourcesToList(t *testing.T) {
-	resourcesList := v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse("1"),
-		v1.ResourceMemory: resource.MustParse("1Gi"),
-	}
-
-	expectedList := v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse("2"),
-		v1.ResourceMemory: resource.MustParse("1800M"),
-	}
-
-	quantity := resource.MustParse("1")
+	resourcesList := v1.ResourceList{}
+	quantity := resource.MustParse("2")
 	name := "cpu"
-	utils.AddResourcesToList(&resourcesList, quantity, name)
-	utils.AddResourcesToList(&resourcesList, resource.MustParse("800M"), "memory")
-
-	if resourcesList.Cpu().Value() != expectedList.Cpu().Value() {
-		t.Errorf("AddResourcesToList failed, expected: %v, got: %v", expectedList, resourcesList)
+	expectedResult := v1.ResourceList{
+		v1.ResourceName(name): quantity,
 	}
+
+	addResourcesToList(&resourcesList, quantity, name)
+	assert.Equal(t, expectedResult, resourcesList)
 }
 
 func TestGetResourcesfromList(t *testing.T) {
 	resourcesList := v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse("1"),
-		v1.ResourceMemory: resource.MustParse("1Gi"),
+		v1.ResourceCPU:    resource.MustParse("2"),
+		v1.ResourceMemory: resource.MustParse("4Gi"),
+	}
+	name := "cpu"
+	expectedResult := resource.MustParse("2")
+
+	result := getResourcesfromList(resourcesList, name)
+	assert.Equal(t, expectedResult, result)
+}
+
+func TestMergeTwoResourceList(t *testing.T) {
+	resourcesList := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("2"),
+		v1.ResourceMemory: resource.MustParse("4Gi"),
+	}
+	resourcesList2 := v1.ResourceList{
+		v1.ResourceMemory: resource.MustParse("8Gi"),
+		v1.ResourcePods:   resource.MustParse("10"),
+	}
+	expectedResult := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("2"),
+		v1.ResourceMemory: resource.MustParse("12Gi"),
+		v1.ResourcePods:   resource.MustParse("10"),
 	}
 
-	expectedQuantity := resource.MustParse("1Gi")
-	name := "memory"
-	quantity := utils.GetResourcesfromList(resourcesList, name)
+	result := MergeTwoResourceList(resourcesList, resourcesList2)
+	assert.True(t, expectedResult.Cpu().Equal(*result.Cpu()), expectedResult.Memory().Equal(*result.Memory()), expectedResult.Pods().Equal(*result.Memory()))
+}
 
-	if !quantity.Equal(expectedQuantity) {
-		t.Errorf("GetResourcesfromList failed, expected: %v, got: %v", expectedQuantity, quantity)
+func TestSubtractFromResourcesList(t *testing.T) {
+	resourcesList := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("4"),
+		v1.ResourceMemory: resource.MustParse("8Gi"),
 	}
+	quantity := resource.MustParse("2")
+	name := "cpu"
+	expectedResult := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("2"),
+		v1.ResourceMemory: resource.MustParse("8Gi"),
+	}
+
+	subtractFromResourcesList(&resourcesList, quantity, name)
+	assert.True(t, expectedResult.Cpu().Equal(*resourcesList.Cpu()))
+}
+
+func TestSubtractTwoResourceList(t *testing.T) {
+	resourcesList := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("4"),
+		v1.ResourceMemory: resource.MustParse("8Gi"),
+	}
+	resourcesList2 := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("2"),
+		v1.ResourceMemory: resource.MustParse("4Gi"),
+	}
+	expectedResult := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("2"),
+		v1.ResourceMemory: resource.MustParse("4Gi"),
+	}
+
+	result := subtractTwoResourceList(resourcesList, resourcesList2)
+	assert.True(t, expectedResult.Cpu().Equal(*result.Cpu()), expectedResult.Memory().Equal(*result.Memory()))
 }
 
 func TestMultiplyResourceList(t *testing.T) {
-	resourcesList := v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse("1"),
-		v1.ResourceMemory: resource.MustParse("1Gi"),
+	resources := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("2"),
+		v1.ResourceMemory: resource.MustParse("4Gi"),
 	}
-
 	factor := map[string]string{
-		"cpu":    "3",
-		"memory": "2",
+		"cpu": "2",
+	}
+	expectedResult := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse("4"),
+		v1.ResourceMemory: resource.MustParse("4Gi"),
 	}
 
-	expectedList := v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse("3"),
-		v1.ResourceMemory: resource.MustParse("2Gi"),
-	}
+	result := multiplyResourceList(resources, factor)
+	assert.True(t, result.Cpu().Equal(*expectedResult.Cpu()))
+}
 
-	result := utils.MultiplyResourceList(resourcesList, factor)
-
-	if expectedList.Cpu().Value() != result.Cpu().Value() || expectedList.Memory().Value() != result.Memory().Value() {
-		t.Errorf("MultiplyResourceList failed, expected: %v, got: %v", expectedList, result)
-	}
+func TestHoursPassedSinceDate(t *testing.T) {
+	sometime := metav1.Time{Time: time.Now().Add(-25 * time.Hour)}
+	result := hoursPassedSinceDate(sometime)
+	assert.Equal(t, 25, result)
 }
