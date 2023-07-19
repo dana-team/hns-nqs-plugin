@@ -22,6 +22,20 @@ import (
 // It takes a context, a NodeList containing the nodes, the NodeQuotaConfig, and the node group name.
 // It returns the calculated resource list (v1.ResourceList) for the node group.
 func CalculateNodeGroup(nodes v1.NodeList, config danav1alpha1.NodeQuotaConfig, nodeGroup string) v1.ResourceList {
+	resourceMultiplier := getResourcesMultiplierByNodeGroup(config, nodeGroup)
+	nodeGroupReources := v1.ResourceList{}
+	for _, node := range nodes.Items {
+		resources := multiplyResourceList(node.Status.Allocatable, resourceMultiplier)
+		for resourceName, resourceQuantity := range resources {
+			addResourcesToList(&nodeGroupReources, resourceQuantity, string(resourceName))
+		}
+	}
+
+	return filterUncontrolledResources(nodeGroupReources, config.Spec.ControlledResources)
+}
+
+// getResourcesMultiplierByNodeGroup returns the resourcesMultiplier for the provided node group name.
+func getResourcesMultiplierByNodeGroup(config danav1alpha1.NodeQuotaConfig, nodeGroup string) map[string]string {
 	var ResourceMultiplier map[string]string
 	for _, secondaryRoot := range config.Spec.Roots {
 		for _, resourceGroup := range secondaryRoot.SecondaryRoots {
@@ -30,15 +44,7 @@ func CalculateNodeGroup(nodes v1.NodeList, config danav1alpha1.NodeQuotaConfig, 
 			}
 		}
 	}
-	nodeGroupReources := v1.ResourceList{}
-	for _, node := range nodes.Items {
-		resources := multiplyResourceList(node.Status.Allocatable, ResourceMultiplier)
-		for resourceName, resourceQuantity := range resources {
-			addResourcesToList(&nodeGroupReources, resourceQuantity, string(resourceName))
-		}
-	}
-
-	return filterUncontrolledResources(nodeGroupReources, config.Spec.ControlledResources)
+	return ResourceMultiplier
 }
 
 // getReservedResourcesByGroup retrieves the reserved resources for a specific node group from the NodeQuotaConfig.
