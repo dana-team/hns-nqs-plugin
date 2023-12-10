@@ -36,8 +36,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	danav1alpha1 "nodeQuotaSync/api/v1alpha1"
-	utils "nodeQuotaSync/internal/utils"
+	danav1alpha1 "github.com/dana-team/hns-nqs-plugin/api/v1alpha1"
+	utils "github.com/dana-team/hns-nqs-plugin/internal/utils"
 )
 
 // NodeQuotaConfigReconciler reconciles a NodeQuotaConfig object

@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	danav1alpha1 "nodeQuotaSync/api/v1alpha1"
+	danav1alpha1 "github.com/dana-team/hns-nqs-plugin/api/v1alpha1"
 )
 
 // CalculateNodeGroup calculates the resource list for a node group based on the provided nodes, NodeQuotaConfig, and node group name.
