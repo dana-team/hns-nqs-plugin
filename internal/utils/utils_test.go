@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	danav1alpha1 "nodeQuotaSync/api/v1alpha1"
+	danav1alpha1 "github.com/dana-team/hns-nqs-plugin/api/v1alpha1"
 
 	danav1 "github.com/dana-team/hns/api/v1"
 	"github.com/go-logr/logr"
