@@ -49,6 +49,8 @@ type NodeQuotaConfigReconciler struct {
 //+kubebuilder:rbac:groups=dana.hns.io,resources=nodequotaconfigs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=resourcequotas,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups="dana.hns.io",resources=subnamespaces,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=dana.hns.io,resources=nodequotaconfigs/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dana.hns.io,resources=nodequotaconfigs/finalizers,verbs=update
 
