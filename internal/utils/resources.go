@@ -8,12 +8,12 @@ import (
 	"k8s.io/utils/strings/slices"
 )
 
-// fiterUncontrolledResources filters the given resources list based on the controlled resources.
+// filterUncontrolledResources filters the given resources list based on the controlled resources.
 // It returns a new resource list that contains only the resources specified in the controlled resources list.
-func filterUncontrolledResources(resourcesList v1.ResourceList, controlledResoures []string) v1.ResourceList {
+func filterUncontrolledResources(resourcesList v1.ResourceList, controlledResources []string) v1.ResourceList {
 	filteredList := v1.ResourceList{}
 	for resourceName, quantity := range resourcesList {
-		if slices.Contains(controlledResoures, resourceName.String()) {
+		if slices.Contains(controlledResources, resourceName.String()) {
 			addResourcesToList(&filteredList, quantity, resourceName.String())
 		}
 	}
@@ -66,7 +66,7 @@ func getResourcesfromList(resourcesList v1.ResourceList, name string) resource.Q
 	return resource.Quantity{}
 }
 
-// mergeTwoResourceList merges two resource lists into a single resource list.
+// MergeTwoResourceList merges two resource lists into a single resource list.
 // It combines the quantities of the same resources from both lists.
 func MergeTwoResourceList(resourcelist v1.ResourceList, resourcelist2 v1.ResourceList) v1.ResourceList {
 	result := make(v1.ResourceList)
