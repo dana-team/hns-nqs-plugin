@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"time"
 
 	danav1 "github.com/dana-team/hns/api/v1"
 	"github.com/go-logr/logr"
@@ -37,7 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	danav1alpha1 "github.com/dana-team/hns-nqs-plugin/api/v1alpha1"
-	utils "github.com/dana-team/hns-nqs-plugin/internal/utils"
+	"github.com/dana-team/hns-nqs-plugin/internal/utils"
 )
 
 // NodeQuotaConfigReconciler reconciles a NodeQuotaConfig object
@@ -64,14 +66,22 @@ func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		return ctrl.Result{}, err
 	}
+
 	logger.Info("Start calculating resources")
-	if err := r.CalculateRootSubnamespaces(ctx, config, logger); err != nil {
+	requeue, err := r.CalculateRootSubnamespaces(ctx, &config, logger)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
+
 	utils.DeleteExpiredReservedResources(&config, logger)
 	if err := r.UpdateConfigStatus(ctx, config, *oldConfigStatus, logger); err != nil {
 		return ctrl.Result{}, err
 	}
+
+	if requeue {
+		return ctrl.Result{RequeueAfter: time.Duration(config.Spec.ReservedHoursToLive) * time.Hour}, nil
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -83,37 +93,46 @@ func (r *NodeQuotaConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&corev1.Node{},
 			handler.EnqueueRequestsFromMapFunc(r.requestConfigReconcile),
 		).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }
 
 // CalculateRootSubnamespaces calculates the resource allocation for the root subnamespaces based on the provided NodeQuotaConfig.
 // It takes a context, the NodeQuotaConfig to reconcile, and a logger for logging informational messages.
 // It returns an error (if any occurred) during the calculation.
-func (r *NodeQuotaConfigReconciler) CalculateRootSubnamespaces(ctx context.Context, config danav1alpha1.NodeQuotaConfig, logger logr.Logger) error {
+func (r *NodeQuotaConfigReconciler) CalculateRootSubnamespaces(ctx context.Context, config *danav1alpha1.NodeQuotaConfig, logger logr.Logger) (bool, error) {
+	requeue := false
 	for _, rootSubnamespace := range config.Spec.Roots {
 		logger.Info(fmt.Sprintf("Starting to calculate RootSubnamespace %s", rootSubnamespace.RootNamespace))
 		rootResources := v1.ResourceList{}
-		processedSecondaryRoots := []danav1.Subnamespace{}
+		var processedSecondaryRoots []danav1.Subnamespace
+
 		for _, secondaryRoot := range rootSubnamespace.SecondaryRoots {
 			logger.Info(fmt.Sprintf("Starting to calculate Secondary root %s", secondaryRoot.Name))
-			err, secondaryRootSns := utils.ProcessSecondaryRoot(ctx, r.Client, secondaryRoot, &config, rootSubnamespace.RootNamespace, logger)
+			secondaryRootSns, secondaryRequeue, err := utils.ProcessSecondaryRoot(ctx, r.Client, secondaryRoot, config, rootSubnamespace.RootNamespace, logger)
 			if err != nil {
-				return err
+				return false, err
 			}
+
+			// it's enough that one secondaryRoot signals a requeue
+			if secondaryRequeue {
+				requeue = true
+			}
+
 			processedSecondaryRoots = append(processedSecondaryRoots, secondaryRootSns)
 			rootResources = utils.MergeTwoResourceList(secondaryRootSns.Spec.ResourceQuotaSpec.Hard, rootResources)
 		}
 		if err := utils.UpdateRootSubnamespace(ctx, rootResources, rootSubnamespace, logger, r.Client); err != nil {
-			return err
+			return false, err
 		}
 		if err := utils.UpdateProcessedSecondaryRoots(ctx, processedSecondaryRoots, logger, r.Client); err != nil {
-			return err
+			return false, err
 		}
 	}
-	return nil
+	return requeue, nil
 }
 
-// UpdateConfigStatus updates the status of the NodeQuotaConfig if its diffrent from the current status.
+// UpdateConfigStatus updates the status of the NodeQuotaConfig if it's different from the current status.
 func (r *NodeQuotaConfigReconciler) UpdateConfigStatus(ctx context.Context, config danav1alpha1.NodeQuotaConfig, oldConfigStatus danav1alpha1.NodeQuotaConfigStatus, logger logr.Logger) error {
 	if !reflect.DeepEqual(oldConfigStatus.ReservedResources, config.Status.ReservedResources) {
 		if err := r.Status().Update(ctx, &config); err != nil {
