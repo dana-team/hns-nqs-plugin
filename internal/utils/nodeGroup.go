@@ -201,8 +201,10 @@ func ProcessSecondaryRoot(ctx context.Context, r client.Client, secondaryRoot da
 	if isGreaterThan(filteredSNSResources, groupResources) {
 		// one or more nodes removed from cluster
 		debt := subtractTwoResourceList(sns.Spec.ResourceQuotaSpec.Hard, groupResources)
+		filteredDebt := filterUncontrolledResources(debt, config.Spec.ControlledResources)
+
 		if groupReserved.NodeGroup == "" || !isReservedResourceExpired(groupReserved, *config) {
-			setReservedToConfig(debt, secondaryRoot.Name, config, logger)
+			setReservedToConfig(filteredDebt, secondaryRoot.Name, config, logger)
 			return sns, true, nil
 		}
 	} else {
