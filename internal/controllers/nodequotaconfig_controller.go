@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"time"
 
@@ -58,9 +57,8 @@ type NodeQuotaConfigReconciler struct {
 
 func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
-	config := danav1alpha1.NodeQuotaConfig{}
-	oldConfigStatus := config.Status.DeepCopy()
-	if err := r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, &config); err != nil {
+	config := &danav1alpha1.NodeQuotaConfig{}
+	if err := r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, config); err != nil {
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -68,13 +66,13 @@ func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	logger.Info("Start calculating resources")
-	requeue, err := r.CalculateRootSubnamespaces(ctx, &config, logger)
+	requeue, err := r.CalculateRootSubnamespaces(ctx, config, logger)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	utils.DeleteExpiredReservedResources(&config, logger)
-	if err := r.UpdateConfigStatus(ctx, config, *oldConfigStatus, logger); err != nil {
+	utils.DeleteExpiredReservedResources(config, logger)
+	if err := r.UpdateConfigStatus(ctx, config, logger); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -133,12 +131,10 @@ func (r *NodeQuotaConfigReconciler) CalculateRootSubnamespaces(ctx context.Conte
 }
 
 // UpdateConfigStatus updates the status of the NodeQuotaConfig if it's different from the current status.
-func (r *NodeQuotaConfigReconciler) UpdateConfigStatus(ctx context.Context, config danav1alpha1.NodeQuotaConfig, oldConfigStatus danav1alpha1.NodeQuotaConfigStatus, logger logr.Logger) error {
-	if !reflect.DeepEqual(oldConfigStatus.ReservedResources, config.Status.ReservedResources) {
-		if err := r.Status().Update(ctx, &config); err != nil {
-			logger.Error(err, fmt.Sprintf("Error updating the NodeQuotaConfig"))
-			return err
-		}
+func (r *NodeQuotaConfigReconciler) UpdateConfigStatus(ctx context.Context, config *danav1alpha1.NodeQuotaConfig, logger logr.Logger) error {
+	if err := r.Status().Update(ctx, config); err != nil {
+		logger.Error(err, fmt.Sprintf("Error updating the NodeQuotaConfig"))
+		return err
 	}
 	return nil
 }
