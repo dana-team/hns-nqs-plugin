@@ -133,7 +133,7 @@ func (r *NodeQuotaConfigReconciler) CalculateRootSubnamespaces(ctx context.Conte
 // UpdateConfigStatus updates the status of the NodeQuotaConfig if it's different from the current status.
 func (r *NodeQuotaConfigReconciler) UpdateConfigStatus(ctx context.Context, config *danav1alpha1.NodeQuotaConfig, logger logr.Logger) error {
 	if err := r.Status().Update(ctx, config); err != nil {
-		logger.Error(err, fmt.Sprintf("Error updating the NodeQuotaConfig"))
+		logger.Error(err, "Error updating the NodeQuotaConfig")
 		return err
 	}
 	return nil

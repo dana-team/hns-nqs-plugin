@@ -13,8 +13,6 @@ import (
 	danav1 "github.com/dana-team/hns/api/v1"
 )
 
-const danaHnsRoleKey = "dana.hns.io/role"
-
 // GetSubnamespaceFromList retrieves the subnamespace with the specified name from the given subnamespace list.
 // It returns a pointer to the subnamespace if found, otherwise it returns nil.
 func GetSubnamespaceFromList(name string, subnamespacelist danav1.SubnamespaceList) *danav1.Subnamespace {

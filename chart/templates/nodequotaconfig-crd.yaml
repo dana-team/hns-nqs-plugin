@@ -1,10 +1,11 @@
----
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
+  name: nodequotaconfigs.dana.hns.io
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
-  name: nodequotaconfigs.dana.hns.io
+  labels:
+  {{- include "chart.labels" . | nindent 4 }}
 spec:
   group: dana.hns.io
   names:
@@ -35,8 +36,8 @@ spec:
             description: NodeQuotaConfigSpec defines the desired state of NodeQuotaConfig
             properties:
               controlledResources:
-                description: 'ControlledResources defines which node resources are
-                  controlled Possible values examples: ["cpu","memory"], ["cpu","gpu"]'
+                description: 'ControlledResources defines which node resources are controlled
+                  Possible values examples: ["cpu","memory"], ["cpu","gpu"]'
                 items:
                   type: string
                 type: array
@@ -55,8 +56,8 @@ spec:
                       description: RootNamespace is the name of the root namespace
                       type: string
                     secondaryRoots:
-                      description: SecondaryRoots are the subnamespaces under the
-                        root namespace
+                      description: SecondaryRoots are the subnamespaces under the root
+                        namespace
                       items:
                         description: NodeGroup defines a group of nodes that allocated
                           to the secondary root workloads
@@ -64,17 +65,17 @@ spec:
                           labelSelector:
                             additionalProperties:
                               type: string
-                            description: 'LabelSelector defines the label selector
-                              of the nodes and how to find them. Possible values examples:
+                            description: 'LabelSelector defines the label selector of
+                              the nodes and how to find them. Possible values examples:
                               {"app":"gpu-nodes"}'
                             type: object
                           multipliers:
                             additionalProperties:
                               type: string
                             description: 'ResourceMultiplier defines the multiplier
-                              that will be used when calculating the resources of
-                              nodes for allowing overcommit Possible values examples:
-                              {"cpu":2, "memory":3} {"cpu":3, "gpu":3}'
+                              that will be used when calculating the resources of nodes
+                              for allowing overcommit Possible values examples: {"cpu":2,
+                              "memory":3} {"cpu":3, "gpu":3}'
                             type: object
                           name:
                             description: Name is the name of the secondaryRoot.
@@ -102,8 +103,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    \n type FooStatus struct{ // Represents the observations of a
-                    foo's current state. // Known .status.conditions.type are: \"Available\",
+                    \n type FooStatus struct{ // Represents the observations of a foo's
+                    current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
@@ -117,8 +118,8 @@ spec:
                       format: date-time
                       type: string
                     message:
-                      description: message is a human readable message indicating
-                        details about the transition. This may be an empty string.
+                      description: message is a human readable message indicating details
+                        about the transition. This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
@@ -132,11 +133,11 @@ spec:
                       type: integer
                     reason:
                       description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers
-                        of specific condition types may define expected values and
-                        meanings for this field, and whether the values are considered
-                        a guaranteed API. The value should be a CamelCase string.
-                        This field may not be empty.
+                        the reason for the condition's last transition. Producers of
+                        specific condition types may define expected values and meanings
+                        for this field, and whether the values are considered a guaranteed
+                        API. The value should be a CamelCase string. This field may
+                        not be empty.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
@@ -167,8 +168,8 @@ spec:
                 type: array
               reservedResources:
                 items:
-                  description: ReservedResources shows the resources of nodes that
-                    were deleted from the cluster but not from the subnamespace quota
+                  description: ReservedResources shows the resources of nodes that were
+                    deleted from the cluster but not from the subnamespace quota
                   properties:
                     Timestamp:
                       description: Timestamp defines when the nodes were removed
@@ -196,3 +197,9 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
