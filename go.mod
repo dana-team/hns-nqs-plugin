@@ -7,9 +7,9 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20240110193028-0dcbfd608b1e
-	k8s.io/api v0.29.0
-	k8s.io/apimachinery v0.29.0
-	k8s.io/client-go v0.29.0
+	k8s.io/api v0.29.1
+	k8s.io/apimachinery v0.29.1
+	k8s.io/client-go v0.29.1
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	sigs.k8s.io/controller-runtime v0.16.3
 )
