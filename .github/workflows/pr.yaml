@@ -1,4 +1,4 @@
-name: pre-merge
+name: tests
 on:
   pull_request:
     branches:
@@ -6,21 +6,17 @@ on:
     types: [opened, reopened, synchronize]
 
 jobs:
-  test:
-    name: test
+  unit-test:
+    name: unit-test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v5
-        with:
-          version: latest
-          args: --timeout=2m
-      - name: Run tests
+
+      - name: Run unit-tests
         run: make test
