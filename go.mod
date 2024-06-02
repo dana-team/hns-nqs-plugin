@@ -4,7 +4,7 @@ go 1.22.2
 
 require (
 	github.com/dana-team/hns v1.2.0
-	github.com/go-logr/logr v1.4.1
+	github.com/go-logr/logr v1.4.2
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 	k8s.io/api v0.30.1
