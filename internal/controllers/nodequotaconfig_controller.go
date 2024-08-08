@@ -98,6 +98,8 @@ func (r *NodeQuotaConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // CalculateRootSubnamespaces calculates the resource allocation for the root subnamespaces based on the provided NodeQuotaConfig.
 // It takes a context, the NodeQuotaConfig to reconcile, and a logger for logging informational messages.
 // It returns an error (if any occurred) during the calculation.
+// If an error occurs during the updating of the root subnamespaces, it logs the error but continues.
+// This is due to the fact that many times, errors occur because nodes have been added or removed from the cluster since the last calculation.
 func (r *NodeQuotaConfigReconciler) CalculateRootSubnamespaces(ctx context.Context, config *danav1alpha1.NodeQuotaConfig, logger logr.Logger) (bool, error) {
 	requeue := false
 	for _, rootSubnamespace := range config.Spec.Roots {
@@ -121,10 +123,11 @@ func (r *NodeQuotaConfigReconciler) CalculateRootSubnamespaces(ctx context.Conte
 			rootResources = utils.MergeTwoResourceList(secondaryRootSns.Spec.ResourceQuotaSpec.Hard, rootResources)
 		}
 		if err := utils.UpdateRootSubnamespace(ctx, rootResources, rootSubnamespace, logger, r.Client); err != nil {
-			return false, err
+			logger.Info(fmt.Sprintf("Error updating root subnamespace %s: %v", rootSubnamespace.RootNamespace, err.Error()))
 		}
+
 		if err := utils.UpdateProcessedSecondaryRoots(ctx, processedSecondaryRoots, logger, r.Client); err != nil {
-			return false, err
+			logger.Info(fmt.Sprintf("Error updating secondary root subnamespace: %v", err.Error()))
 		}
 	}
 	return requeue, nil
