@@ -1,0 +1,22 @@
+{{- if .Values.nodeQuotaConfig.enabled }}
+apiVersion: dana.hns.io/v1alpha1
+kind: NodeQuotaConfig
+metadata:
+  name: {{ .Values.nodeQuotaConfig.name | default "example-nodequotaconfig" }}
+spec:
+  reservedHoursToLive: {{ .Values.nodeQuotaConfig.reservedHoursToLive }}
+  controlledResources:
+  {{- toYaml .Values.nodeQuotaConfig.controlledResources | nindent 2 }}
+  subnamespacesRoots:
+  {{- range .Values.nodeQuotaConfig.subnamespacesRoots }}
+  - rootNamespace: {{ .rootNamespace }}
+    secondaryRoots:
+    {{- range .secondaryRoots }}
+    - labelSelector:
+        {{- toYaml .labelSelector | nindent 8 }}
+      name: {{ .name }}
+      multipliers:
+        {{- toYaml .multipliers | nindent 8 }}
+    {{- end }}
+  {{- end }}
+  {{- end }}

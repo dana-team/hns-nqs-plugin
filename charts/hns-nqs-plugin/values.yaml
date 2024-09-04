@@ -1,0 +1,161 @@
+# Default values for hns-nqs-plugin.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  manager:
+    # -- The repository of the manager container image.
+    repository: ghcr.io/dana-team/hns-nqs-plugin
+    # -- The tag of the manager container image.
+    tag: ""
+    # -- The pull policy for the image.
+    pullPolicy: IfNotPresent
+
+  kubeRbacProxy:
+    # -- The repository of the kube-rbac-proxy container image.
+    repository: gcr.io/kubebuilder/kube-rbac-proxy
+    # -- The tag of the kube-rbac-proxy container image.
+    tag: v0.16.0
+    # -- The pull policy for the image.
+    pullPolicy: IfNotPresent
+
+# Override the name of the deployment
+nameOverride: ""
+
+# Override the full name of the deployment
+fullnameOverride: ""
+
+# -- The number of replicas for the deployment.
+replicaCount: 1
+
+# -- Node selector for scheduling pods. Allows you to specify node labels for pod assignment.
+nodeSelector: {}
+
+# -- Node tolerations for scheduling pods. Allows the pods to be scheduled on nodes with matching taints.
+tolerations: []
+
+# -- Node affinity rules for scheduling pods. Allows you to specify advanced node selection constraints.
+affinity: {}
+
+# -- Configuration for the liveness probe.
+livenessProbe:
+  # -- The initial delay before the liveness probe is initiated.
+  initialDelaySeconds: 15
+  # -- The frequency (in seconds) with which the probe will be performed.
+  periodSeconds: 20
+
+# -- Configuration for the readiness probe.
+readinessProbe:
+  # -- The initial delay before the readiness probe is initiated.
+  initialDelaySeconds: 5
+  # -- The frequency (in seconds) with which the probe will be performed.
+  periodSeconds: 10
+
+# -- Configuration for the manager container.
+manager:
+  # -- Command-line commands passed to the manager container.
+  command:
+    - /manager
+  # -- Command-line arguments passed to the manager container.
+  args:
+    - "--leader-elect"
+    - "--health-probe-bind-address=:8081"
+    - "--metrics-bind-address=127.0.0.1:8080"
+  ports:
+    health:
+      # -- The port for the health check endpoint.
+      containerPort: 8081
+      # -- The protocol used by the health check endpoint.
+      protocol: TCP
+      # -- The name of the health check port.
+      name: health
+  # -- Security settings for the manager container.
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - "ALL"
+  # -- Resource requests and limits for the manager container.
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
+
+# -- Configuration for the kube-rbac-proxy container.
+kubeRbacProxy:
+  # -- Command-line arguments passed to the kube-rbac-proxy container.
+  args:
+    - "--secure-listen-address=0.0.0.0:8443"
+    - "--upstream=http://127.0.0.1:8080/"
+    - "--logtostderr=true"
+    - "--v=0"
+  ports:
+    https:
+      # -- The port for the HTTPS endpoint.
+      containerPort: 8443
+      # -- The protocol used by the HTTPS endpoint.
+      protocol: TCP
+      # -- The name of the HTTPS port.
+      name: https
+  # -- Security settings for the kube-rbac-proxy container.
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - "ALL"
+  # -- Resource requests and limits for the kube-rbac-proxy container.
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 5m
+      memory: 64Mi
+
+# -- Pod-level security context for the entire pod.
+securityContext: {}
+
+# -- Configuration for the metrics service.
+service:
+  # -- The port for the HTTPS endpoint.
+  httpsPort: 8443
+  # -- The protocol used by the HTTPS endpoint.
+  protocol: TCP
+  # -- The name of the target port.
+  targetPort: https
+  # -- The type of the service.
+  type: ClusterIP
+
+nodeQuotaConfig:
+  ## -- Flag which indicates whether to deploy a NodeQuotaConfig resource.
+  enabled: false
+  # -- The name of the NodeQuotaConfig resource.
+  name: cluster-nodequotaconfig
+  # -- Defines how many hours the ReservedResources can live until they are removed from the cluster resources.
+  reservedHoursToLive: 48
+  # -- Defines which node resources are controlled.
+  controlledResources:
+    - cpu
+    - memory
+    - pods
+  # -- The cluster's hierarchy (root namespace and secondary roots).
+  subnamespacesRoots:
+    # -- The name of the root namespace.
+    - rootNamespace: cluster-root
+      # -- The hierarchy of the secondary roots.
+      secondaryRoots:
+        - labelSelector:
+            app: gpu
+          name: gpu
+          # -- The overcommit multipliers.
+          multipliers:
+            cpu: "1"
+            memory: "1"
+        - labelSelector:
+            app: cpu-workloads
+          name: cpu-workloads
+          multipliers:
+            memory: "1"
