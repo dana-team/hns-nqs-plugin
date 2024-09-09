@@ -12,6 +12,14 @@ It enables syncing the `root subnamespace` quota object and `secondary subnamesp
 - Select what type of resource to control
 - Control through a Config CRD
 
+## Install with Helm
+
+Helm chart docs are available on `charts/hns-nqs-plugin` directory.
+
+```bash
+$ helm upgrade hns-nqs-plugin --install --namespace nodequotasync-system --create-namespace oci://ghcr.io/dana-team/helm-charts/hns-nqs-plugin --version <release>
+```
+
 ## Configuration
 
 The `NodeQuotaSync` plugin is configured using the `NodeQuotaConfig` CRD:

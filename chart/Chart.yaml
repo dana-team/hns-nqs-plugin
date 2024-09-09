@@ -1,7 +1,0 @@
-apiVersion: v2
-name: hns-nqs-plugin
-description: A Helm chart for plugin for the HNS project to calculate root resources
-type: application
-version: 0.1.0
-appVersion: latest
-kubeVersion: ">=1.25.0-0"
