@@ -1,6 +1,6 @@
 module github.com/dana-team/hns-nqs-plugin
 
-go 1.22.2
+go 1.23.4
 
 require (
 	github.com/dana-team/hns v1.5.0
