@@ -1,6 +1,6 @@
 domain: hns.io
 layout:
-- go.kubebuilder.io/v3
+- go.kubebuilder.io/v4
 projectName: nodequotasync
 repo: nodeQuotaSync
 resources:

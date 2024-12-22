@@ -19,8 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	danav1 "github.com/dana-team/hns/api/v1"
 	"github.com/go-logr/logr"
