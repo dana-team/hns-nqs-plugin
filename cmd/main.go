@@ -25,6 +25,9 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	danav1alpha1 "github.com/dana-team/hns-nqs-plugin/api/v1alpha1"
+	"github.com/dana-team/hns-nqs-plugin/internal/controllers"
+	nqsmetrics "github.com/dana-team/hns-nqs-plugin/internal/metrics"
 	danav1 "github.com/dana-team/hns/api/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -35,9 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
-	danav1alpha1 "github.com/dana-team/hns-nqs-plugin/api/v1alpha1"
-	"github.com/dana-team/hns-nqs-plugin/internal/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -152,6 +152,8 @@ func main() {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	nqsmetrics.InitializeNQSMetrics()
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
