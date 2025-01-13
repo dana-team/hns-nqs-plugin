@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/dana-team/hns-nqs-plugin/internal/metrics"
+	"strconv"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -76,6 +78,8 @@ func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err := r.UpdateConfigStatus(ctx, config, logger); err != nil {
 		return ctrl.Result{}, err
 	}
+	
+	updateNQSMetrics(config)
 
 	if requeue {
 		return ctrl.Result{RequeueAfter: time.Duration(config.Spec.ReservedHoursToLive) * time.Hour}, nil
@@ -163,4 +167,17 @@ func (r *NodeQuotaConfigReconciler) requestConfigReconcile(ctx context.Context, 
 		}
 	}
 	return requests
+}
+
+// updateNQSMetrics updates the metrics for the overcommit multiplier for each secondary root in the NodeQuotaConfig.
+func updateNQSMetrics(config *danav1alpha1.NodeQuotaConfig) {
+	for _, root := range config.Spec.Roots {
+		for _, secondaryRoot := range root.SecondaryRoots {
+			for resource, value := range secondaryRoot.ResourceMultiplier {
+				if floatValue, err := strconv.ParseFloat(value, 64); err == nil {
+					metrics.ObserveOverCommitMultiplier(resource, root.RootNamespace, secondaryRoot.Name, floatValue)
+				}
+			}
+		}
+	}
 }

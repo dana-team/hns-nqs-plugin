@@ -38,7 +38,7 @@ spec:
         - labelSelector:
             app: gpu
           name: gpu
-          multipliers:
+          multipliers:  
             cpu: "2"
             memory: "2"
         - labelSelector:
