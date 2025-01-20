@@ -1,0 +1,21 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "hns-nqs-plugin.fullname" . }}-service-monitor
+spec:
+  endpoints:
+    {{- range .Values.serviceMonitor.endpoints }}
+    - path: {{ .path }}
+      port: {{ .port }}
+      scheme: {{ .scheme }}
+      tlsConfig:
+        insecureSkipVerify: {{ .tlsConfig.insecureSkipVerify | default false }}
+      bearerTokenFile: {{ .bearerTokenFile | quote }}
+    {{- end }}
+  selector:
+    matchLabels:
+      {{- range $key, $value := .Values.serviceMonitor.selector.matchLabels }}
+      {{ $key }}: {{ $value | quote }}
+      {{- end }}
+      {{- end }}

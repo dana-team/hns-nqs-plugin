@@ -127,3 +127,20 @@ nodeQuotaConfig:
           name: cpu-workloads
           multipliers:
             memory: "1"
+
+
+
+serviceMonitor:
+  # Enable creation of the service monitor
+  enabled: false
+  endpoints:
+    - path: /metrics
+      port: https
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+
