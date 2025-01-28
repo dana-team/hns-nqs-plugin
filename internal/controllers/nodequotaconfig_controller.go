@@ -19,9 +19,11 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/dana-team/hns-nqs-plugin/internal/metrics"
 	"strconv"
 	"time"
+
+	"github.com/dana-team/hns-nqs-plugin/internal/metrics"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -78,7 +80,7 @@ func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err := r.UpdateConfigStatus(ctx, config, logger); err != nil {
 		return ctrl.Result{}, err
 	}
-	
+
 	updateNQSMetrics(config)
 
 	if requeue {
@@ -113,11 +115,22 @@ func (r *NodeQuotaConfigReconciler) CalculateRootSubnamespaces(ctx context.Conte
 		var processedSecondaryRoots []danav1.Subnamespace
 
 		for _, secondaryRoot := range rootSubnamespace.SecondaryRoots {
-			logger.Info(fmt.Sprintf("Starting to calculate Secondary root %s", secondaryRoot.Name))
+			logger.Info(fmt.Sprintf("*************************************Starting to calculate Secondary root %s", secondaryRoot.Name))
 			secondaryRootSns, secondaryRequeue, err := utils.ProcessSecondaryRoot(ctx, r.Client, secondaryRoot, config, rootSubnamespace.RootNamespace, logger)
 			if err != nil {
 				return false, err
 			}
+
+			// Subtract the ResourceList from the calculated resources for the secondary root.
+			secondaryRootResources := secondaryRootSns.Spec.ResourceQuotaSpec.Hard.DeepCopy()
+			subtractionList := map[string]resource.Quantity{
+				"cpu":    secondaryRoot.ResourceList.CPU,
+				"memory": secondaryRoot.ResourceList.Memory,
+			}
+
+			utils.SubtractResources(subtractionList, secondaryRootResources)
+
+			secondaryRootSns.Spec.ResourceQuotaSpec.Hard = secondaryRootResources
 
 			// it's enough that one secondaryRoot signals a requeue
 			if secondaryRequeue {

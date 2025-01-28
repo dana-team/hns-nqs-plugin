@@ -5,10 +5,10 @@ import (
 	"time"
 
 	danav1alpha1 "github.com/dana-team/hns-nqs-plugin/api/v1alpha1"
-
 	danav1 "github.com/dana-team/hns/api/v1"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "k8s.io/api/core/v1"
@@ -235,4 +235,96 @@ func TestHoursPassedSinceDate(t *testing.T) {
 	sometime := metav1.Time{Time: time.Now().Add(-25 * time.Hour)}
 	result := hoursPassedSinceDate(sometime)
 	assert.Equal(t, 25, result)
+}
+
+func TestSubtractResources(t *testing.T) {
+	testCases := []struct {
+		name              string
+		subtractionList   map[string]resource.Quantity
+		initialResources  corev1.ResourceList
+		expectedResources corev1.ResourceList
+	}{
+		{
+			name: "basic subtraction",
+			subtractionList: map[string]resource.Quantity{
+				"cpu":    resource.MustParse("2"),
+				"memory": resource.MustParse("2Gi"),
+			},
+			initialResources: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("4"),
+				corev1.ResourceMemory: resource.MustParse("8Gi"),
+			},
+			expectedResources: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("2"),
+				corev1.ResourceMemory: resource.MustParse("6Gi"),
+			},
+		},
+		{
+			name: "subtraction with missing resource in initial list",
+			subtractionList: map[string]resource.Quantity{
+				"cpu":    resource.MustParse("1"),
+				"memory": resource.MustParse("1Gi"),
+			},
+			initialResources: corev1.ResourceList{
+				corev1.ResourceCPU: resource.MustParse("2"),
+				// memory is intentionally missing
+			},
+			expectedResources: corev1.ResourceList{
+				corev1.ResourceCPU: resource.MustParse("1"),
+			},
+		},
+		{
+			name: "subtraction with zero values",
+			subtractionList: map[string]resource.Quantity{
+				"cpu":    resource.MustParse("0"),
+				"memory": resource.MustParse("0"),
+			},
+			initialResources: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("4"),
+				corev1.ResourceMemory: resource.MustParse("8Gi"),
+			},
+			expectedResources: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("4"),
+				corev1.ResourceMemory: resource.MustParse("8Gi"),
+			},
+		},
+		{
+			name: "subtraction with different units",
+			subtractionList: map[string]resource.Quantity{
+				"memory": resource.MustParse("1024Mi"),
+			},
+			initialResources: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("2Gi"),
+			},
+			expectedResources: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("1Gi"),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create a copy of initial resources to avoid modifying the test case
+			actualResources := tc.initialResources.DeepCopy()
+
+			// Call the function being tested
+			SubtractResources(tc.subtractionList, actualResources)
+
+			// Compare results
+			for resourceName, expectedQuantity := range tc.expectedResources {
+				actualQuantity, exists := actualResources[resourceName]
+				if !exists {
+					t.Errorf("Expected resource %s not found in result", resourceName)
+					continue
+				}
+
+				if !actualQuantity.Equal(expectedQuantity) {
+					t.Errorf("Resource %s: expected %s, got %s",
+						resourceName,
+						expectedQuantity.String(),
+						actualQuantity.String())
+				}
+			}
+		})
+	}
 }

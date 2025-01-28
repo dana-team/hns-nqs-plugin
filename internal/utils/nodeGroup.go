@@ -89,7 +89,7 @@ func CalculateSecondaryNodeGroup(ctx context.Context, r client.Client, nodegroup
 
 	nodeList := v1.NodeList{}
 	if err := r.List(ctx, &nodeList, listOptions); err != nil {
-		logger.Error(err, fmt.Sprintf("Error listing the nodes for the nodeGroup %s", nodegroup))
+		logger.Error(err, fmt.Sprintf("Error listing the nodes for the nodeGroup %v", nodegroup))
 		return err, v1.ResourceList{}
 	}
 

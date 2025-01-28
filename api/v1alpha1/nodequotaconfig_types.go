@@ -18,8 +18,16 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+type ResourceList struct {
+	// +kubebuilder:default="0"
+	CPU resource.Quantity `json:"cpu"`
+	// +kubebuilder:default="0"
+	Memory resource.Quantity `json:"memory"`
+}
 
 // NodeQuotaConfigSpec defines the desired state of NodeQuotaConfig
 type NodeQuotaConfigSpec struct {
@@ -62,6 +70,9 @@ type NodeGroup struct {
 	// ResourceMultiplier defines the multiplier that will be used when calculating the resources of nodes for allowing overcommit
 	// Possible values examples: {"cpu":2, "memory":3} {"cpu":3, "gpu":3}
 	ResourceMultiplier map[string]string `json:"multipliers,omitempty"`
+	// ResourceList defines the already set resources that in default should be subtracted from the
+	// resource quantity of the secondary root
+	ResourceList ResourceList `json:"resourceList"`
 }
 
 // NodeQuotaConfigStatus defines the observed state of NodeQuotaConfig
