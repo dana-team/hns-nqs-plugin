@@ -22,6 +22,7 @@ package v1alpha1
 
 import (
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -41,6 +42,13 @@ func (in *NodeGroup) DeepCopyInto(out *NodeGroup) {
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
+		}
+	}
+	if in.SystemResourceClaim != nil {
+		in, out := &in.SystemResourceClaim, &out.SystemResourceClaim
+		*out = make(map[string]resource.Quantity, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val.DeepCopy()
 		}
 	}
 }

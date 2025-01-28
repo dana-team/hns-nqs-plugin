@@ -19,10 +19,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/dana-team/hns-nqs-plugin/internal/metrics"
 	"strconv"
 	"time"
 
+	nqsmetrics "github.com/dana-team/hns-nqs-plugin/internal/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	danav1 "github.com/dana-team/hns/api/v1"
@@ -78,7 +78,7 @@ func (r *NodeQuotaConfigReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err := r.UpdateConfigStatus(ctx, config, logger); err != nil {
 		return ctrl.Result{}, err
 	}
-	
+
 	updateNQSMetrics(config)
 
 	if requeue {
@@ -169,15 +169,33 @@ func (r *NodeQuotaConfigReconciler) requestConfigReconcile(ctx context.Context, 
 	return requests
 }
 
-// updateNQSMetrics updates the metrics for the overcommit multiplier for each secondary root in the NodeQuotaConfig.
-func updateNQSMetrics(config *danav1alpha1.NodeQuotaConfig) {
+// updateOvercommitMultiplierMetrics updates the metrics for overcommit multiplier for each secondary root in the NodeQuotaConfig.
+func updateOvercommitMultiplierMetrics(config *danav1alpha1.NodeQuotaConfig) {
 	for _, root := range config.Spec.Roots {
 		for _, secondaryRoot := range root.SecondaryRoots {
 			for resource, value := range secondaryRoot.ResourceMultiplier {
 				if floatValue, err := strconv.ParseFloat(value, 64); err == nil {
-					metrics.ObserveOverCommitMultiplier(resource, root.RootNamespace, secondaryRoot.Name, floatValue)
+					nqsmetrics.ObserveOverCommitMultiplier(resource, root.RootNamespace, secondaryRoot.Name, floatValue)
 				}
 			}
 		}
 	}
+}
+
+// updateSystemClaimMetrics updates the metrics for system resource claims for each secondary root
+func updateSystemClaimMetrics(config *danav1alpha1.NodeQuotaConfig) {
+	for _, root := range config.Spec.Roots {
+		for _, secondaryRoot := range root.SecondaryRoots {
+			for resourceName, quantity := range secondaryRoot.SystemResourceClaim {
+				value := float64(quantity.Value())
+				nqsmetrics.ObserveSystemClaimResources(resourceName, root.RootNamespace, secondaryRoot.Name, value)
+			}
+		}
+	}
+}
+
+// updateNQSMetrics updates the metrics for the overcommit multiplier for each secondary root in the NodeQuotaConfig.
+func updateNQSMetrics(config *danav1alpha1.NodeQuotaConfig) {
+	updateOvercommitMultiplierMetrics(config)
+	updateSystemClaimMetrics(config)
 }
