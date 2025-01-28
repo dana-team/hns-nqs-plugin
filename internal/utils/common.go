@@ -5,6 +5,9 @@ import (
 	"math"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -41,4 +44,13 @@ func hoursPassedSinceDate(timestamp metav1.Time) int {
 	timeDiff := currentTime.Sub(timestamp.Time)
 	hoursPassed := timeDiff.Hours()
 	return int(math.Round(hoursPassed))
+}
+
+func SubtractResources(subtractionList map[string]resource.Quantity, secondaryRootResources v1.ResourceList) {
+	for resourceName, quantity := range subtractionList {
+		if val, ok := secondaryRootResources[corev1.ResourceName(resourceName)]; ok {
+			val.Sub(quantity)
+			secondaryRootResources[corev1.ResourceName(resourceName)] = val
+		}
+	}
 }

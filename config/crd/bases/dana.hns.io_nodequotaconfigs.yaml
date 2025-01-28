@@ -84,9 +84,33 @@ spec:
                           name:
                             description: Name is the name of the secondaryRoot.
                             type: string
+                          resourceList:
+                            description: |-
+                              ResourceList defines the already set resources that in default should be subtracted from the
+                              resource quantity of the secondary root
+                            properties:
+                              cpu:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                default: "0"
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              memory:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                default: "0"
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - cpu
+                            - memory
+                            type: object
                         required:
                         - labelSelector
                         - name
+                        - resourceList
                         type: object
                       type: array
                   required:
