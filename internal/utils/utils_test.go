@@ -5,7 +5,6 @@ import (
 	"time"
 
 	danav1alpha1 "github.com/dana-team/hns-nqs-plugin/api/v1alpha1"
-
 	danav1 "github.com/dana-team/hns/api/v1"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
@@ -226,8 +225,13 @@ func TestMultiplyResourceList(t *testing.T) {
 		v1.ResourceCPU:    resource.MustParse("4"),
 		v1.ResourceMemory: resource.MustParse("4Gi"),
 	}
+	reservedResources := map[string]resource.Quantity{
+		"cpu":    resource.MustParse("2"),
+		"memory": resource.MustParse("2Gi"),
+	}
+	logger := logr.Discard()
 
-	result := multiplyResourceList(resources, factor)
+	result := multiplyResourceList(resources, factor, reservedResources, logger)
 	assert.True(t, result.Cpu().Equal(*expectedResult.Cpu()))
 }
 
@@ -235,4 +239,105 @@ func TestHoursPassedSinceDate(t *testing.T) {
 	sometime := metav1.Time{Time: time.Now().Add(-25 * time.Hour)}
 	result := hoursPassedSinceDate(sometime)
 	assert.Equal(t, 25, result)
+}
+
+func TestSubtractResources(t *testing.T) {
+	// Create a test logger
+	logger := logr.Discard()
+
+	tests := []struct {
+		name              string
+		resources         v1.ResourceList
+		reservedResources map[string]resource.Quantity
+		expected          v1.ResourceList
+	}{
+		{
+			name: "successful subtraction",
+			resources: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("4"),
+				v1.ResourceMemory: resource.MustParse("8Gi"),
+			},
+			reservedResources: map[string]resource.Quantity{
+				"cpu":    resource.MustParse("1"),
+				"memory": resource.MustParse("2Gi"),
+			},
+			expected: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("3"),
+				v1.ResourceMemory: resource.MustParse("6Gi"),
+			},
+		},
+		{
+			name: "attempt subtraction with negative result",
+			resources: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("1"),
+				v1.ResourceMemory: resource.MustParse("1Gi"),
+			},
+			reservedResources: map[string]resource.Quantity{
+				"cpu":    resource.MustParse("2"),
+				"memory": resource.MustParse("2Gi"),
+			},
+			expected: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("1"),
+				v1.ResourceMemory: resource.MustParse("1Gi"),
+			},
+		},
+		{
+			name: "missing resource in reserved",
+			resources: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("4"),
+				v1.ResourceMemory: resource.MustParse("8Gi"),
+			},
+			reservedResources: map[string]resource.Quantity{
+				"cpu": resource.MustParse("1"),
+			},
+			expected: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("3"),
+				v1.ResourceMemory: resource.MustParse("8Gi"),
+			},
+		},
+		{
+			name: "missing resource in original",
+			resources: v1.ResourceList{
+				v1.ResourceCPU: resource.MustParse("4"),
+			},
+			reservedResources: map[string]resource.Quantity{
+				"cpu":    resource.MustParse("1"),
+				"memory": resource.MustParse("2Gi"),
+			},
+			expected: v1.ResourceList{
+				v1.ResourceCPU: resource.MustParse("3"),
+			},
+		},
+		{
+			name: "empty reserved resources",
+			resources: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("4"),
+				v1.ResourceMemory: resource.MustParse("8Gi"),
+			},
+			reservedResources: map[string]resource.Quantity{},
+			expected: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("4"),
+				v1.ResourceMemory: resource.MustParse("8Gi"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := subtractResources(tt.resources, tt.reservedResources, logger)
+
+			// Check that the result has the expected values
+			assert.Equal(t, len(tt.expected), len(result), "number of resources should match")
+
+			for resourceName, expectedQuantity := range tt.expected {
+				resultQuantity, exists := result[resourceName]
+				assert.True(t, exists, "resource should exist in result")
+				assert.True(t, expectedQuantity.Equal(resultQuantity),
+					"resource %v: expected %v, got %v",
+					resourceName,
+					expectedQuantity.String(),
+					resultQuantity.String())
+			}
+		})
+	}
 }

@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"reflect"
 
 	danav1 "github.com/dana-team/hns/api/v1"
@@ -21,11 +22,12 @@ import (
 // CalculateNodeGroup calculates the resource list for a node group based on the provided nodes, NodeQuotaConfig, and node group name.
 // It takes a context, a NodeList containing the nodes, the NodeQuotaConfig, and the node group name.
 // It returns the calculated resource list (v1.ResourceList) for the node group.
-func CalculateNodeGroup(nodes v1.NodeList, config danav1alpha1.NodeQuotaConfig, nodeGroup string) v1.ResourceList {
+func CalculateNodeGroup(nodes v1.NodeList, config danav1alpha1.NodeQuotaConfig, nodeGroup string, logger logr.Logger) v1.ResourceList {
 	resourceMultiplier := getResourcesMultiplierByNodeGroup(config, nodeGroup)
+	systemResourceClaim := getSystemResourceClaimByNodeGroup(config, nodeGroup)
 	nodeGroupResources := v1.ResourceList{}
 	for _, node := range nodes.Items {
-		resources := multiplyResourceList(node.Status.Allocatable, resourceMultiplier)
+		resources := multiplyResourceList(node.Status.Allocatable, resourceMultiplier, systemResourceClaim, logger)
 		for resourceName, resourceQuantity := range resources {
 			addResourcesToList(&nodeGroupResources, resourceQuantity, string(resourceName))
 		}
@@ -45,6 +47,18 @@ func getResourcesMultiplierByNodeGroup(config danav1alpha1.NodeQuotaConfig, node
 		}
 	}
 	return ResourceMultiplier
+}
+
+// getSystemResourceClaimByNodeGroup retrieves the systemResourceClaim for the specified nodeGroup
+func getSystemResourceClaimByNodeGroup(config danav1alpha1.NodeQuotaConfig, nodeGroupName string) map[string]resource.Quantity {
+	for _, root := range config.Spec.Roots {
+		for _, group := range root.SecondaryRoots {
+			if group.Name == nodeGroupName {
+				return group.SystemResourceClaim
+			}
+		}
+	}
+	return nil
 }
 
 // getReservedResourcesByGroup retrieves the reserved resources for a specific node group from the NodeQuotaConfig.
@@ -89,11 +103,11 @@ func CalculateSecondaryNodeGroup(ctx context.Context, r client.Client, nodegroup
 
 	nodeList := v1.NodeList{}
 	if err := r.List(ctx, &nodeList, listOptions); err != nil {
-		logger.Error(err, fmt.Sprintf("Error listing the nodes for the nodeGroup %s", nodegroup))
+		logger.Error(err, fmt.Sprintf("Error listing the nodes for the nodeGroup %v", nodegroup))
 		return err, v1.ResourceList{}
 	}
 
-	nodeResources := CalculateNodeGroup(nodeList, *config, nodegroup.Name)
+	nodeResources := CalculateNodeGroup(nodeList, *config, nodegroup.Name, logger)
 	return nil, nodeResources
 }
 

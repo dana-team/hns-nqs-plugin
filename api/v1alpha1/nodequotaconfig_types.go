@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -62,6 +63,8 @@ type NodeGroup struct {
 	// ResourceMultiplier defines the multiplier that will be used when calculating the resources of nodes for allowing overcommit
 	// Possible values examples: {"cpu":2, "memory":3} {"cpu":3, "gpu":3}
 	ResourceMultiplier map[string]string `json:"multipliers,omitempty"`
+	// ReservedResources resources to be subtracted from each node before addition to secondary roots
+	SystemResourceClaim map[string]resource.Quantity `json:"systemResourceClaim"`
 }
 
 // NodeQuotaConfigStatus defines the observed state of NodeQuotaConfig
