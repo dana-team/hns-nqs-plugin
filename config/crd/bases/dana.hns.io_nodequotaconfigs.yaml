@@ -84,9 +84,20 @@ spec:
                           name:
                             description: Name is the name of the secondaryRoot.
                             type: string
+                          systemResourceClaim:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: ReservedResources resources to be subtracted
+                              from each node before addition to secondary roots
+                            type: object
                         required:
                         - labelSelector
                         - name
+                        - systemResourceClaim
                         type: object
                       type: array
                   required:

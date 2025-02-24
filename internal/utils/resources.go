@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"fmt"
+	"github.com/go-logr/logr"
 	"strconv"
 
 	v1 "k8s.io/api/core/v1"
@@ -121,9 +123,8 @@ func patchResourcesToList(resourcesList v1.ResourceList, resourcesToPatch v1.Res
 
 // multiplyResourceList multiplies the values of resources in the given resource list by the corresponding factors.
 // It returns a new resource list with the multiplied values.
-func multiplyResourceList(resources v1.ResourceList, factor map[string]string) v1.ResourceList {
-	result := make(v1.ResourceList)
-
+func multiplyResourceList(resources v1.ResourceList, factor map[string]string, reservedResources map[string]resource.Quantity, logger logr.Logger) v1.ResourceList {
+	result := subtractResources(resources, reservedResources, logger)
 	for name, value := range resources {
 		if factor[name.String()] == "" {
 			result[name] = value
@@ -138,6 +139,23 @@ func multiplyResourceList(resources v1.ResourceList, factor map[string]string) v
 		newValue.Set(int64(newValueInt64))
 
 		result[name] = *newValue
+	}
+
+	return result
+}
+
+func subtractResources(resources v1.ResourceList, reservedResources map[string]resource.Quantity, logger logr.Logger) v1.ResourceList {
+	result := resources.DeepCopy()
+
+	for name, subtractValue := range reservedResources {
+		if resourceValue, exists := result[v1.ResourceName(name)]; exists {
+			if resourceValue.Cmp(subtractValue) > 0 {
+				resourceValue.Sub(subtractValue)
+				result[v1.ResourceName(name)] = resourceValue
+			} else {
+				logger.Info(fmt.Sprintf("node does not contain enough of resource %s to reserve, needed: %s actual: %s", name, subtractValue.String(), resourceValue.String()))
+			}
+		}
 	}
 
 	return result
