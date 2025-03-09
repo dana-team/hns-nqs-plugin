@@ -37,6 +37,9 @@ spec:
           {{- range .Values.manager.args }}
           - {{ . | quote }}
           {{- end }}
+          {{- range .Values.manager.extraArgs }}
+          - {{ . | quote }}
+          {{- end }}
           securityContext:
             {{- toYaml .Values.manager.securityContext | nindent 12 }}
           livenessProbe:
