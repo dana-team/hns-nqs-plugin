@@ -1,11 +1,12 @@
 module github.com/dana-team/hns-nqs-plugin
 
 go 1.23.4
+toolchain go1.24.1
 
 require (
 	github.com/dana-team/hns v1.5.0
 	github.com/go-logr/logr v1.4.2
-	github.com/prometheus/client_golang v1.21.0
+	github.com/prometheus/client_golang v1.21.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
 	k8s.io/api v0.32.2
