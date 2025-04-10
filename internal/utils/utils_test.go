@@ -14,6 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+const resourceName = "cpu"
+
 func TestGetSubnamespaceFromList(t *testing.T) {
 	subnamespaceList := danav1.SubnamespaceList{
 		Items: []danav1.Subnamespace{
@@ -99,7 +101,7 @@ func TestFilterUncontrolledResources(t *testing.T) {
 		v1.ResourceCPU:    resource.MustParse("1"),
 		v1.ResourceMemory: resource.MustParse("2Gi"),
 	}
-	controlledResources := []string{"cpu"}
+	controlledResources := []string{resourceName}
 	expectedResult := v1.ResourceList{
 		v1.ResourceCPU: resource.MustParse("1"),
 	}
@@ -139,7 +141,7 @@ func TestIsEqualTo(t *testing.T) {
 func TestAddResourcesToList(t *testing.T) {
 	resourcesList := v1.ResourceList{}
 	quantity := resource.MustParse("2")
-	name := "cpu"
+	name := resourceName
 	expectedResult := v1.ResourceList{
 		v1.ResourceName(name): quantity,
 	}
@@ -153,7 +155,7 @@ func TestGetResourcesfromList(t *testing.T) {
 		v1.ResourceCPU:    resource.MustParse("2"),
 		v1.ResourceMemory: resource.MustParse("4Gi"),
 	}
-	name := "cpu"
+	name := resourceName
 	expectedResult := resource.MustParse("2")
 
 	result := getResourcesfromList(resourcesList, name)
@@ -185,7 +187,7 @@ func TestSubtractFromResourcesList(t *testing.T) {
 		v1.ResourceMemory: resource.MustParse("8Gi"),
 	}
 	quantity := resource.MustParse("2")
-	name := "cpu"
+	name := resourceName
 	expectedResult := v1.ResourceList{
 		v1.ResourceCPU:    resource.MustParse("2"),
 		v1.ResourceMemory: resource.MustParse("8Gi"),
