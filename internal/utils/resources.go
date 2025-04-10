@@ -2,8 +2,9 @@ package utils
 
 import (
 	"fmt"
-	"github.com/go-logr/logr"
 	"strconv"
+
+	"github.com/go-logr/logr"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
