@@ -73,8 +73,8 @@ type NodeQuotaConfigStatus struct {
 	ReservedResources []ReservedResources `json:"reservedResources,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // NodeQuotaConfig is the Schema for the nodequotaconfigs API
 type NodeQuotaConfig struct {
@@ -85,7 +85,7 @@ type NodeQuotaConfig struct {
 	Status NodeQuotaConfigStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // NodeQuotaConfigList contains a list of NodeQuotaConfig
 type NodeQuotaConfigList struct {
