@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/dana-team/hns v1.5.0
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
