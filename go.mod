@@ -6,7 +6,7 @@ require (
 	github.com/dana-team/hns v1.5.1
 	github.com/go-logr/logr v1.4.3
 	github.com/prometheus/client_golang v1.22.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/exp v0.0.0-20250531010427-b6e5de432a8b
 	k8s.io/api v0.33.2
 	k8s.io/apimachinery v0.33.2
